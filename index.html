@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="midnight">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ChainSage — Trust Layer for Autonomous Finance</title>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  /* ============ THEME TOKENS ============ */
+  :root{
+    --primary:#7C5CFF; --secondary:#9C82FF; --accent:#5B8DEF;
+    --trust:#34D399; --warning:#FBBF24; --danger:#F4534F; --p3:#B9A5FF;
+    --ease:cubic-bezier(0.22,1,0.36,1);
+  }
+  /* MIDNIGHT */
+  html[data-theme="midnight"]{
+    --bg:#0A0816; --bg2:#0E0A1E;
+    --text:#F4F4F7; --text2:#A6A6B5; --text3:#6E6E80;
+    --card:rgba(22,20,40,0.55); --card-border:rgba(255,255,255,0.10); --card-strong:rgba(255,255,255,0.16);
+    --glass-hi:rgba(255,255,255,0.08); --shadow:0 16px 50px rgba(0,0,0,0.55);
+    --orb1:rgba(124,92,255,0.30); --orb2:rgba(91,141,239,0.22); --orb3:rgba(156,130,255,0.18);
+    --grid-line:rgba(255,255,255,0.035);
+  }
+  /* AURORA LIGHT */
+  html[data-theme="aurora"]{
+    --bg:#F4F2FB; --bg2:#ECEAF8;
+    --text:#15131F; --text2:#54506A; --text3:#8B86A0;
+    --card:rgba(255,255,255,0.62); --card-border:rgba(124,92,255,0.14); --card-strong:rgba(124,92,255,0.28);
+    --glass-hi:rgba(255,255,255,0.7); --shadow:0 16px 50px rgba(124,92,255,0.12);
+    --orb1:rgba(124,92,255,0.22); --orb2:rgba(91,141,239,0.18); --orb3:rgba(180,160,255,0.22);
+    --grid-line:rgba(124,92,255,0.05);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg);color:var(--text);font-family:'Hanken Grotesk',-apple-system,system-ui,sans-serif;overflow-x:hidden;transition:background .6s var(--ease),color .4s var(--ease);position:relative;min-height:100vh;}
+  ::-webkit-scrollbar{width:10px;}::-webkit-scrollbar-thumb{background:var(--card-strong);border-radius:10px;}::-webkit-scrollbar-track{background:transparent;}
+  a{text-decoration:none;color:inherit;} button{font-family:inherit;cursor:pointer;border:none;background:none;}
+  input{font-family:'JetBrains Mono',monospace;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+
+  /* ===== atmosphere layers ===== */
+  .atmos{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+  .orb{position:absolute;border-radius:50%;filter:blur(70px);opacity:1;transition:background .6s var(--ease);will-change:transform;}
+  .orb1{width:560px;height:560px;top:-180px;left:50%;margin-left:-280px;background:radial-gradient(circle,var(--orb1),transparent 68%);}
+  .orb2{width:480px;height:480px;top:30%;right:-160px;background:radial-gradient(circle,var(--orb2),transparent 68%);animation:drift1 22s ease-in-out infinite;}
+  .orb3{width:520px;height:520px;bottom:-120px;left:-120px;background:radial-gradient(circle,var(--orb3),transparent 68%);animation:drift2 26s ease-in-out infinite;}
+  .gridlines{position:absolute;inset:0;background-image:linear-gradient(var(--grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);background-size:64px 64px;mask-image:radial-gradient(ellipse at 50% 0%,#000 30%,transparent 75%);-webkit-mask-image:radial-gradient(ellipse at 50% 0%,#000 30%,transparent 75%);}
+  .noise{position:absolute;inset:0;opacity:.5;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");}
+  html[data-theme="aurora"] .noise{opacity:.18;}
+  @keyframes drift1{0%,100%{transform:translate(0,0);}50%{transform:translate(-40px,40px);}}
+  @keyframes drift2{0%,100%{transform:translate(0,0);}50%{transform:translate(50px,-30px);}}
+
+  /* ===== glass primitives ===== */
+  .glass{background:var(--card);backdrop-filter:blur(28px) saturate(1.4);-webkit-backdrop-filter:blur(28px) saturate(1.4);border:1px solid var(--card-border);box-shadow:var(--shadow),inset 0 1px 0 var(--glass-hi);}
+  .gradtext{background:linear-gradient(120deg,var(--p3),var(--primary) 48%,var(--accent));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+  .brandgrad{background:linear-gradient(135deg,var(--primary),var(--secondary) 55%,var(--accent));}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px;position:relative;z-index:1;}
+  .btnp{color:#fff;font-weight:700;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;gap:8px;position:relative;overflow:hidden;transition:transform .2s var(--ease),box-shadow .3s var(--ease);box-shadow:0 8px 28px rgba(124,92,255,0.35);}
+  .btnp:hover{transform:translateY(-2px);box-shadow:0 14px 40px rgba(124,92,255,0.5);}
+  .btnp:active{transform:translateY(0) scale(.98);}
+  .btnp .sheen{position:absolute;top:0;left:-120%;width:60%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,0.4),transparent);transform:skewX(-18deg);animation:sheen 4.5s ease-in-out infinite;}
+  @keyframes sheen{0%,60%{left:-120%;}80%,100%{left:160%;}}
+  .btng{font-weight:700;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--card-border);background:var(--card);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);color:var(--text);transition:border-color .2s,transform .2s var(--ease);}
+  .btng:hover{border-color:var(--card-strong);transform:translateY(-2px);}
+
+  .reveal{opacity:0;transform:translateY(28px);transition:opacity .7s var(--ease),transform .7s var(--ease);}
+  .reveal.in{opacity:1;transform:none;}
+
+  h2.h2{font-size:clamp(32px,5.5vw,52px);font-weight:800;letter-spacing:-0.025em;line-height:1.06;text-align:center;}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;padding:7px 15px;border-radius:999px;font-size:12.5px;font-weight:600;letter-spacing:.02em;color:var(--text2);}
+  section{padding:clamp(80px,11vw,140px) 24px;position:relative;z-index:1;}
+  .iconbox{display:grid;place-items:center;border-radius:13px;flex-shrink:0;}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;}
+  .grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;}
+
+  @keyframes spin{to{transform:rotate(360deg);}}
+  @keyframes flowdash{to{stroke-dashoffset:-24;}}
+  @keyframes floaty{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}
+  @keyframes stampin{0%{opacity:0;transform:scale(1.3);}60%{opacity:1;transform:scale(.95);}100%{transform:scale(1);}}
+  @keyframes pulsedot{0%,100%{box-shadow:0 0 0 0 rgba(52,211,153,0.5);}50%{box-shadow:0 0 0 6px rgba(52,211,153,0);}}
+  @keyframes ringpulse{0%{r:6;opacity:.8;}100%{r:24;opacity:0;}}
+  .stamp{animation:stampin .45s var(--ease);}
+  .floaty{animation:floaty 6s ease-in-out infinite;}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;}.reveal{opacity:1;transform:none;}}
+
+  @media (max-width:900px){
+    .grid3,.grid5{grid-template-columns:1fr;}
+    .herogrid,.twocol{grid-template-columns:1fr!important;}
+    .navlinks{display:none!important;}
+    .demo3{grid-template-columns:1fr!important;}
+    .demo-side{border-right:none!important;border-bottom:1px solid var(--card-border)!important;}
+  }
+</style>
+</head>
+<body>
+<div class="atmos" id="atmos">
+  <div class="orb orb1"></div><div class="orb orb2"></div><div class="orb orb3"></div>
+  <div class="gridlines"></div><div class="noise"></div>
+</div>
+<div id="root"></div>
+<script>
+/* ChainSage landing v2 — pure vanilla JS, zero external script deps */
+(function(){
+"use strict";
+var SVGNS="http://www.w3.org/2000/svg";
+var C={primary:"#7C5CFF",secondary:"#9C82FF",accent:"#5B8DEF",trust:"#34D399",warning:"#FBBF24",danger:"#F4534F",p3:"#B9A5FF"};
+
+function el(tag,attrs,kids){
+  var n=document.createElement(tag);
+  if(attrs)for(var k in attrs){
+    if(k==="style"&&typeof attrs[k]==="object"){for(var s2 in attrs[k])n.style[s2]=attrs[k][s2];}
+    else if(k==="class")n.className=attrs[k];
+    else if(k==="html")n.innerHTML=attrs[k];
+    else if(k.indexOf("on")===0&&typeof attrs[k]==="function")n.addEventListener(k.slice(2).toLowerCase(),attrs[k]);
+    else if(attrs[k]!=null)n.setAttribute(k,attrs[k]);
+  }
+  addKids(n,kids); return n;
+}
+function addKids(n,kids){
+  if(kids==null)return;
+  if(Array.isArray(kids)){kids.forEach(function(c){addKids(n,c);});return;}
+  if(typeof kids==="string"||typeof kids==="number"){n.appendChild(document.createTextNode(String(kids)));return;}
+  n.appendChild(kids);
+}
+function sv(tag,attrs,kids){
+  var n=document.createElementNS(SVGNS,tag);
+  if(attrs)for(var k in attrs){if(attrs[k]!=null)n.setAttribute(k,attrs[k]);}
+  if(kids)(Array.isArray(kids)?kids:[kids]).forEach(function(c){if(c)n.appendChild(c);});
+  return n;
+}
+function txt(t){return document.createTextNode(t);}
+
+/* ---- icons ---- */
+function svgIcon(paths,size,color,extra){
+  size=size||20;color=color||"currentColor";
+  var n=sv("svg",{width:size,height:size,viewBox:"0 0 24 24",fill:"none",stroke:color,"stroke-width":2,"stroke-linecap":"round","stroke-linejoin":"round"});
+  paths.forEach(function(p){n.appendChild(sv("path",{d:p}));});
+  if(extra)extra.forEach(function(x){n.appendChild(x);});
+  return n;
+}
+var IC={
+  arrow:function(s,c){return svgIcon(["M5 12h14M13 5l7 7-7 7"],s,c);},
+  lock:function(s,c){return svgIcon(["M5 11h14v10H5z","M8 11V7a4 4 0 0 1 8 0v4"],s,c);},
+  shield:function(s,c){return svgIcon(["M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"],s,c);},
+  spark:function(s,c){return svgIcon(["M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"],s,c);},
+  check:function(s,c){return svgIcon(["M20 6L9 17l-5-5"],s,c);},
+  activity:function(s,c){return svgIcon(["M22 12h-4l-3 9L9 3l-3 9H2"],s,c);},
+  send:function(s,c){return svgIcon(["M22 2L11 13","M22 2l-7 20-4-9-9-4z"],s,c);},
+  layers:function(s,c){return svgIcon(["M12 2l9 5-9 5-9-5z","M3 12l9 5 9-5","M3 17l9 5 9-5"],s,c);},
+  play:function(s,c){return svgIcon(["M6 4l14 8-14 8z"],s,c);},
+  sun:function(s,c){s=s||20;c=c||"currentColor";return svgIcon(["M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"],s,c,[sv("circle",{cx:12,cy:12,r:4,fill:"none",stroke:c,"stroke-width":2})]);},
+  moon:function(s,c){return svgIcon(["M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"],s,c);},
+  bot:function(s,c){s=s||20;c=c||"#fff";var g=sv("svg",{width:s,height:s,viewBox:"0 0 24 24",fill:"none",stroke:c,"stroke-width":2,"stroke-linecap":"round","stroke-linejoin":"round"});g.appendChild(sv("rect",{x:4,y:8,width:16,height:12,rx:3}));g.appendChild(sv("path",{d:"M12 8V5M9 2h6"}));g.appendChild(sv("circle",{cx:9,cy:14,r:1.2,fill:c}));g.appendChild(sv("circle",{cx:15,cy:14,r:1.2,fill:c}));return g;},
+  cpu:function(s,c){s=s||20;c=c||"currentColor";var g=sv("svg",{width:s,height:s,viewBox:"0 0 24 24",fill:"none",stroke:c,"stroke-width":2});g.appendChild(sv("rect",{x:6,y:6,width:12,height:12,rx:2}));g.appendChild(sv("path",{d:"M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"}));return g;},
+  gauge:function(s,c){s=s||20;c=c||"currentColor";var g=sv("svg",{width:s,height:s,viewBox:"0 0 24 24",fill:"none",stroke:c,"stroke-width":2,"stroke-linecap":"round"});g.appendChild(sv("path",{d:"M12 14l4-4"}));g.appendChild(sv("path",{d:"M3.3 17a9 9 0 1 1 17.4 0"}));return g;},
+  net:function(s,c){s=s||20;c=c||"currentColor";var g=sv("svg",{width:s,height:s,viewBox:"0 0 24 24",fill:"none",stroke:c,"stroke-width":2});g.appendChild(sv("circle",{cx:5,cy:6,r:2.5}));g.appendChild(sv("circle",{cx:19,cy:6,r:2.5}));g.appendChild(sv("circle",{cx:12,cy:18,r:2.5}));g.appendChild(sv("path",{d:"M7 7.5l4 8M17 7.5l-4 8"}));return g;},
+  zap:function(s,c){return svgIcon(["M13 2L4 14h7l-1 8 9-12h-7z"],s,c);},
+  term:function(s,c){s=s||20;c=c||"currentColor";var g=sv("svg",{width:s,height:s,viewBox:"0 0 24 24",fill:"none",stroke:c,"stroke-width":2,"stroke-linecap":"round","stroke-linejoin":"round"});g.appendChild(sv("rect",{x:3,y:4,width:18,height:16,rx:2}));g.appendChild(sv("path",{d:"M7 9l3 3-3 3M13 15h4"}));return g;},
+  file:function(s,c){s=s||20;c=c||"currentColor";var g=sv("svg",{width:s,height:s,viewBox:"0 0 24 24",fill:"none",stroke:c,"stroke-width":2,"stroke-linecap":"round","stroke-linejoin":"round"});g.appendChild(sv("path",{d:"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"}));g.appendChild(sv("path",{d:"M14 2v6h6M9 15l2 2 4-4"}));return g;},
+  checkc:function(s,c){s=s||20;c=c||"currentColor";var g=sv("svg",{width:s,height:s,viewBox:"0 0 24 24",fill:"none",stroke:c,"stroke-width":2,"stroke-linecap":"round","stroke-linejoin":"round"});g.appendChild(sv("circle",{cx:12,cy:12,r:10}));g.appendChild(sv("path",{d:"M8 12l3 3 5-6"}));return g;},
+  ban:function(s,c){s=s||20;c=c||"currentColor";var g=sv("svg",{width:s,height:s,viewBox:"0 0 24 24",fill:"none",stroke:c,"stroke-width":2});g.appendChild(sv("circle",{cx:12,cy:12,r:10}));g.appendChild(sv("path",{d:"M5 5l14 14"}));return g;},
+  hand:function(s,c){return svgIcon(["M18 11V6a2 2 0 0 0-4 0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8a8 8 0 0 0 8 8h2a6 6 0 0 0 6-6v-3a2 2 0 0 0-4 0"],s,c);},
+  radio:function(s,c){s=s||20;c=c||"currentColor";var g=sv("svg",{width:s,height:s,viewBox:"0 0 24 24",fill:"none",stroke:c,"stroke-width":2,"stroke-linecap":"round"});g.appendChild(sv("circle",{cx:12,cy:12,r:2}));g.appendChild(sv("path",{d:"M7.8 7.8a6 6 0 0 0 0 8.4M16.2 16.2a6 6 0 0 0 0-8.4M5 5a10 10 0 0 0 0 14M19 19a10 10 0 0 0 0-14"}));return g;},
+  wallet:function(s,c){s=s||20;c=c||"currentColor";var g=sv("svg",{width:s,height:s,viewBox:"0 0 24 24",fill:"none",stroke:c,"stroke-width":2,"stroke-linejoin":"round"});g.appendChild(sv("path",{d:"M3 7a2 2 0 0 1 2-2h14v4"}));g.appendChild(sv("path",{d:"M3 7v10a2 2 0 0 0 2 2h15V7z"}));g.appendChild(sv("circle",{cx:16,cy:13,r:1.3,fill:c}));return g;},
+  circle:function(s,c){s=s||14;c=c||"currentColor";var g=sv("svg",{width:s,height:s,viewBox:"0 0 24 24",fill:"none",stroke:c,"stroke-width":2});g.appendChild(sv("circle",{cx:12,cy:12,r:10}));g.appendChild(sv("circle",{cx:12,cy:12,r:3,fill:c}));return g;}
+};
+
+/* ---- Sage Mark logo ---- */
+var markN=0;
+function mark(size){
+  size=size||36; markN++; var id="m"+markN;
+  var svg=sv("svg",{width:size,height:size,viewBox:"0 0 120 120",fill:"none"});
+  var defs=sv("defs");
+  var g1=sv("linearGradient",{id:"g"+id,x1:20,y1:100,x2:100,y2:20,gradientUnits:"userSpaceOnUse"});
+  g1.appendChild(sv("stop",{offset:0,"stop-color":"#7C5CFF"}));g1.appendChild(sv("stop",{offset:0.55,"stop-color":"#9C82FF"}));g1.appendChild(sv("stop",{offset:1,"stop-color":"#5B8DEF"}));
+  var g2=sv("linearGradient",{id:"c"+id,x1:46,y1:46,x2:74,y2:74,gradientUnits:"userSpaceOnUse"});
+  g2.appendChild(sv("stop",{offset:0,"stop-color":"#B9A5FF"}));g2.appendChild(sv("stop",{offset:1,"stop-color":"#7C5CFF"}));
+  defs.appendChild(g1);defs.appendChild(g2);svg.appendChild(defs);
+  var gg=sv("g",{stroke:"url(#g"+id+")","stroke-width":5.5,"stroke-linecap":"round",fill:"none"});
+  gg.appendChild(sv("path",{d:"M28 92 Q44 76 56 64"}));gg.appendChild(sv("path",{d:"M64 56 Q80 44 92 28"}));gg.appendChild(sv("path",{d:"M92 92 Q74 74 64 64"}));
+  svg.appendChild(gg);
+  svg.appendChild(sv("circle",{cx:28,cy:92,r:9,fill:"var(--bg)",stroke:"url(#g"+id+")","stroke-width":4.5}));
+  svg.appendChild(sv("circle",{cx:92,cy:28,r:9,fill:"url(#g"+id+")"}));
+  svg.appendChild(sv("circle",{cx:92,cy:92,r:7,fill:"var(--bg)",stroke:"url(#g"+id+")","stroke-width":4}));
+  svg.appendChild(sv("rect",{x:46,y:46,width:28,height:28,rx:7,transform:"rotate(45 60 60)",fill:"url(#c"+id+")"}));
+  svg.appendChild(sv("rect",{x:52.5,y:52.5,width:15,height:15,rx:3.5,transform:"rotate(45 60 60)",fill:"#0B0B12",opacity:0.5}));
+  return svg;
+}
+
+/* reveal observer */
+var IO=(typeof window!=="undefined"&&window.IntersectionObserver)?window.IntersectionObserver:null;
+var io=IO?new IO(function(es){es.forEach(function(x){if(x.isIntersecting){x.target.classList.add("in");io.unobserve(x.target);}});},{threshold:0.1,rootMargin:"-30px"}):null;
+function reveal(node,delay){node.classList.add("reveal");if(delay)node.style.transitionDelay=delay+"ms";if(io)io.observe(node);else node.classList.add("in");return node;}
+function h2(){var a=Array.prototype.slice.call(arguments);var n=el("h2",{class:"h2"});addKids(n,a);return reveal(n);}
+function eyebrow(label){return el("span",{class:"eyebrow glass"},[IC.spark(13,C.secondary),label]);}
+
+/* expose to part 2 */
+window.__CS={el:el,sv:sv,txt:txt,addKids:addKids,IC:IC,mark:mark,reveal:reveal,h2:h2,eyebrow:eyebrow,C:C};
+})();
+</script>
+<script>
+/* ChainSage v2 — sections + theme + mount */
+(function(){
+"use strict";
+var X=window.__CS, el=X.el, sv=X.sv, txt=X.txt, addKids=X.addKids, IC=X.IC, mark=X.mark, reveal=X.reveal, h2=X.h2, eyebrow=X.eyebrow, C=X.C;
+function v(name){return getComputedStyle(document.documentElement).getPropertyValue(name).trim();}
+
+/* ============ THEME TOGGLE ============ */
+function buildThemeToggle(){
+  function cur(){return document.documentElement.getAttribute("data-theme");}
+  var knob=el("span",{style:{position:"absolute",top:"3px",width:"24px",height:"24px",borderRadius:"50%",transition:"left .4s var(--ease),background .4s",display:"grid",placeItems:"center"}});
+  function paint(){
+    var midnight=cur()==="midnight";
+    knob.style.left=midnight?"3px":"31px";
+    knob.style.background=midnight?"linear-gradient(135deg,#7C5CFF,#5B8DEF)":"linear-gradient(135deg,#FBBF24,#9C82FF)";
+    knob.innerHTML=""; knob.appendChild(midnight?IC.moon(13,"#fff"):IC.sun(13,"#fff"));
+  }
+  var track=el("button",{class:"glass","aria-label":"Toggle theme",style:{position:"relative",width:"58px",height:"30px",borderRadius:"999px",flexShrink:0},onclick:function(){
+    var next=cur()==="midnight"?"aurora":"midnight";
+    document.documentElement.setAttribute("data-theme",next);
+    try{localStorage.setItem("cs-theme",next);}catch(e){}
+    paint();
+  }},[knob]);
+  paint();
+  return track;
+}
+
+/* ============ NAV ============ */
+function buildNav(){
+  var links=[["The Layer","#layer"],["How it Works","#how"],["Demo","#demo"],["Network","#network"]];
+  var bar=el("div",{class:"glass",style:{borderRadius:"18px",padding:"11px 14px 11px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"12px"}},[
+    el("a",{href:"#",style:{display:"flex",alignItems:"center",gap:"10px"}},[mark(30),el("span",{style:{fontWeight:800,fontSize:"18px",letterSpacing:"-0.02em"}},"ChainSage")]),
+    el("nav",{class:"navlinks",style:{display:"flex",alignItems:"center",gap:"26px"}},links.map(function(l){return el("a",{href:l[1],style:{fontSize:"14px",color:"var(--text2)",transition:"color .2s"},onmouseenter:function(){this.style.color="var(--text)";},onmouseleave:function(){this.style.color="var(--text2)";}},l[0]);})),
+    el("div",{style:{display:"flex",alignItems:"center",gap:"12px"}},[buildThemeToggle(),el("a",{href:"#cta",class:"btnp brandgrad",style:{fontSize:"14px",padding:"9px 17px"}},[el("span",{class:"sheen"}),"Join Waitlist"])])
+  ]);
+  return el("header",{style:{position:"fixed",top:0,left:0,right:0,zIndex:80}},el("div",{class:"wrap",style:{marginTop:"18px"}},bar));
+}
+
+/* ============ HERO ============ */
+var PIPE=[["Simulate","activity"],["Analyze","gauge"],["Policy","lock"],["Trust Network","net"]];
+var VERDICTS=[
+  {v:"ALLOW",c:C.trust,ic:"checkc",label:"Swap 500 USDC",exec:"Executed on-chain"},
+  {v:"DENY",c:C.danger,ic:"ban",label:"Unlimited approval",exec:"Blocked before signing"},
+  {v:"REVIEW",c:C.warning,ic:"hand",label:"Bridge · unknown chain",exec:"Held for owner"}
+];
+function vIcon(n,s,c){return IC[n]?IC[n](s,c):IC.check(s,c);}
+
+function buildVerdictCore(){
+  var wrap=el("div",{style:{width:"100%",maxWidth:"440px",margin:"0 auto"}});
+  function fline(active,color){color=color||C.primary;var svg=sv("svg",{width:2,height:22});var ln=sv("line",{x1:1,y1:0,x2:1,y2:22,stroke:active?color:"var(--card-border)","stroke-width":2,"stroke-dasharray":"2 5","stroke-linecap":"round"});if(active)ln.style.animation="flowdash .7s linear infinite";svg.appendChild(ln);svg.style.margin="3px 0";return svg;}
+  var labelEl=el("span",{class:"mono",style:{fontSize:"12px",color:"var(--text2)",maxWidth:"150px",textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},VERDICTS[0].label);
+  var agent=el("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"10px"}},[
+    el("div",{class:"glass",style:{display:"flex",alignItems:"center",gap:"10px",borderRadius:"13px",padding:"10px 14px"}},[
+      el("span",{class:"iconbox",style:{width:"32px",height:"32px",borderRadius:"9px",background:"rgba(91,141,239,0.16)"}},IC.bot(18,C.accent)),
+      el("div",{},[el("div",{style:{fontSize:"13px",fontWeight:700}},"AI Agent"),el("div",{class:"mono",style:{fontSize:"11px",color:"var(--text3)"}},"intent")])]),labelEl]);
+  var badge=el("span",{});
+  var pipeRows=[];
+  var grid=el("div",{style:{position:"relative",display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px"}});
+  PIPE.forEach(function(p){
+    var box=el("span",{class:"iconbox",style:{width:"24px",height:"24px",borderRadius:"7px",background:"var(--card)"}},IC[p[1]](13,"var(--text3)"));
+    var t=el("span",{style:{fontSize:"12px",fontWeight:500,color:"var(--text3)"}},p[0]);
+    var row=el("div",{style:{display:"flex",alignItems:"center",gap:"8px",padding:"8px 10px",borderRadius:"9px",transition:"all .3s",opacity:0.4}},[box,t]);
+    pipeRows.push({row:row,box:box,t:t,name:p[1]}); grid.appendChild(row);
+  });
+  var core=el("div",{class:"glass",style:{borderRadius:"20px",padding:"18px",margin:"3px 0",position:"relative",overflow:"hidden"}},[
+    el("div",{style:{position:"absolute",top:"-70px",left:"50%",transform:"translateX(-50%)",width:"240px",height:"240px",borderRadius:"50%",background:"radial-gradient(circle,rgba(124,92,255,0.22),transparent 70%)"}}),
+    el("div",{style:{position:"relative",display:"flex",alignItems:"center",gap:"12px",marginBottom:"14px"}},[mark(30),el("div",{style:{flex:1}},[el("div",{style:{fontWeight:800,fontSize:"15px"}},"ChainSage"),el("div",{class:"mono",style:{fontSize:"11px",color:"var(--text3)"}},"decision engine")]),badge]),
+    grid]);
+  var line2=fline(false);
+  var execIcon=el("span",{class:"iconbox",style:{width:"32px",height:"32px",borderRadius:"9px",background:"var(--card)"}},IC.cpu(17,"var(--text3)"));
+  var execTitle=el("div",{style:{fontSize:"13px",fontWeight:700}},"Execution");
+  var execCard=el("div",{class:"glass",style:{display:"flex",alignItems:"center",gap:"10px",borderRadius:"13px",padding:"10px 14px",marginTop:"10px"}},[execIcon,el("div",{style:{flex:1}},[execTitle,el("div",{class:"mono",style:{fontSize:"11px",color:"var(--text3)"}},"on-chain")])]);
+  wrap.appendChild(agent);
+  wrap.appendChild(el("div",{style:{display:"flex",justifyContent:"center"}},fline(true)));
+  wrap.appendChild(core);
+  wrap.appendChild(el("div",{style:{display:"flex",justifyContent:"center"}},line2));
+  wrap.appendChild(execCard);
+  var vi=0,phase=0,timers=[];
+  function setLine(svg,active,color){var ln=svg.querySelector("line");ln.setAttribute("stroke",active?color:v("--card-border"));ln.style.animation=active?"flowdash .7s linear infinite":"";}
+  function render(){
+    var cur=VERDICTS[vi],show=phase>PIPE.length;
+    labelEl.textContent=cur.label;
+    pipeRows.forEach(function(r,i){var done=phase>i+1||show,active=phase===i+1&&!show;r.row.style.background=active?"var(--card)":"transparent";r.row.style.opacity=(done||active)?1:0.4;r.t.style.color=(done||active)?"var(--text)":"var(--text3)";r.box.style.background=done?"rgba(52,211,153,0.15)":active?"rgba(124,92,255,0.18)":"var(--card)";r.box.innerHTML="";r.box.appendChild(done?IC.check(13,C.trust):IC[r.name](13,active?C.secondary:"var(--text3)"));});
+    badge.innerHTML="";
+    if(show){badge.appendChild(el("span",{class:"stamp",style:{display:"inline-flex",alignItems:"center",gap:"6px",padding:"6px 12px",borderRadius:"999px",fontSize:"12px",fontWeight:800,background:cur.c+"22",color:cur.c}},[vIcon(cur.ic,14,cur.c),cur.v]));}
+    setLine(line2,show,cur.c);
+    execIcon.style.background=show?cur.c+"22":"var(--card)";execIcon.innerHTML="";execIcon.appendChild(show?vIcon(cur.ic,17,cur.c):IC.cpu(17,"var(--text3)"));
+    execTitle.textContent=show?cur.exec:"Execution";execCard.style.borderColor=show?cur.c+"55":"";
+  }
+  function seq(){phase=0;render();var step=0;function adv(){step++;phase=step;render();if(step<=PIPE.length)timers.push(setTimeout(adv,560));else timers.push(setTimeout(function(){vi=(vi+1)%VERDICTS.length;seq();},2600));}timers.push(setTimeout(adv,700));}
+  seq();
+  return wrap;
+}
+
+function buildHero(){
+  var left=el("div",{},[
+    reveal(eyebrow("Read-only · the verdict before execution")),
+    reveal(el("h1",{style:{marginTop:"22px",fontSize:"clamp(42px,7.5vw,68px)",fontWeight:900,lineHeight:1.02,letterSpacing:"-0.035em"}},[txt("Trust Layer for "),el("span",{class:"gradtext"},"Autonomous Finance")]),80),
+    reveal(el("div",{style:{marginTop:"26px",fontSize:"clamp(17px,2.4vw,20px)",color:"var(--text2)",lineHeight:1.5}},[el("p",{},"Settlement moves money."),el("p",{},"Authorization grants permission."),el("p",{style:{color:"var(--text)",fontWeight:600}},"ChainSage decides whether it should happen.")]),160),
+    reveal(el("div",{style:{marginTop:"24px",fontSize:"15px",color:"var(--text3)",maxWidth:"460px",lineHeight:1.65}},"As AI agents begin controlling wallets, making payments, and executing transactions autonomously, every action needs a trust verdict before execution. ChainSage is the decision engine between intent and the chain."),240),
+    reveal(el("div",{style:{marginTop:"38px",display:"flex",flexWrap:"wrap",gap:"13px"}},[
+      el("a",{href:"#cta",class:"btnp brandgrad",style:{padding:"15px 26px",fontSize:"15.5px"}},[el("span",{class:"sheen"}),"Join Waitlist",IC.arrow(17,"#fff")]),
+      el("a",{href:"#demo",class:"btng",style:{padding:"15px 26px",fontSize:"15.5px"}},[IC.play(15,"var(--text)"),"Watch Demo"])]),320)
+  ]);
+  return el("section",{style:{paddingTop:"clamp(140px,18vw,200px)",paddingBottom:"clamp(70px,10vw,120px)"}},
+    el("div",{class:"wrap herogrid",style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"60px",alignItems:"center"}},[left,reveal(el("div",{class:"floaty"},buildVerdictCore()),160)]));
+}
+
+/* ============ SECTION 2 — The Missing Layer ============ */
+function buildLayer(){
+  var blocks=[
+    {t:"Settlement",d:"Moves the money.",tag:"x402 · MPP",ic:"send"},
+    {t:"Authorization",d:"Grants permission.",tag:"AP2",ic:"file"},
+    {t:"Decision",d:"Decides whether it should happen at all.",tag:"ChainSage",ic:"spark",hot:true}
+  ];
+  var row=el("div",{class:"grid3",style:{marginTop:"60px"}},blocks.map(function(b,i){
+    var card=el("div",{class:"glass",style:{borderRadius:"22px",padding:"30px",height:"100%",position:"relative",overflow:"hidden",borderColor:b.hot?"var(--card-strong)":""}},[
+      b.hot?el("div",{style:{position:"absolute",inset:0,background:"radial-gradient(circle at 50% 0%,rgba(124,92,255,0.18),transparent 65%)",pointerEvents:"none"}}):null,
+      el("div",{style:{position:"relative",display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"22px"}},[
+        el("span",{class:"iconbox",style:{width:"48px",height:"48px",borderRadius:"14px",background:b.hot?"rgba(124,92,255,0.18)":"var(--card)"}},IC[b.ic](22,b.hot?C.secondary:"var(--text2)")),
+        el("span",{class:"mono",style:{fontSize:"11px",padding:"5px 10px",borderRadius:"999px",color:b.hot?C.secondary:"var(--text3)",background:b.hot?"rgba(124,92,255,0.12)":"transparent",border:b.hot?"1px solid rgba(124,92,255,0.3)":""}},b.tag)]),
+      el("div",{style:{position:"relative",fontSize:"22px",fontWeight:800,marginBottom:"8px"}},b.t),
+      el("div",{style:{position:"relative",fontSize:"15px",color:"var(--text2)",lineHeight:1.55}},b.d)]);
+    if(b.hot){card.style.animation="floaty 5s ease-in-out infinite";}
+    return reveal(card,i*100);
+  }));
+  return el("section",{id:"layer"},el("div",{class:"wrap"},[
+    el("div",{style:{textAlign:"center",marginBottom:"8px"}},reveal(eyebrow("The category nobody owns"))),
+    h2(txt("AI Agents Can Execute."),el("br"),el("span",{style:{color:"var(--text3)"}},"They Cannot Judge.")),
+    reveal(el("p",{style:{textAlign:"center",color:"var(--text2)",fontSize:"17px",maxWidth:"620px",margin:"22px auto 0",lineHeight:1.6}},"The rails to move money and grant permission are being built by giants. The layer that decides whether an action is safe and in-policy — before it executes — is still missing. That's the layer that makes autonomy possible.")),
+    row]));
+}
+
+/* ============ SECTION 3 — How it works ============ */
+function buildHow(){
+  var steps=[["Agent Intent","bot"],["Simulation","activity"],["Risk Engine","gauge"],["Policy Engine","lock"],["Trust Network","net"],["Verdict","shield"],["Execution","cpu"]];
+  var rows=[];
+  var list=el("div",{style:{marginTop:"56px",display:"flex",flexDirection:"column",gap:"10px",maxWidth:"640px",margin:"56px auto 0"}});
+  steps.forEach(function(st,i){
+    var hot=st[0]==="Verdict";
+    var box=el("span",{class:"iconbox",style:{width:"42px",height:"42px",borderRadius:"12px",background:hot?"rgba(124,92,255,0.16)":"var(--card)",transition:"all .4s"}},IC[st[1]](20,hot?C.secondary:"var(--text2)"));
+    var dot=el("span",{style:{width:"8px",height:"8px",borderRadius:"50%",background:"var(--card-strong)",transition:"all .4s"}});
+    var card=el("div",{class:"glass",style:{borderRadius:"16px",padding:"15px 20px",display:"flex",alignItems:"center",gap:"16px",transition:"all .4s var(--ease)",borderColor:hot?"var(--card-strong)":"",background:hot?"rgba(124,92,255,0.06)":""}},[
+      box,el("div",{style:{flex:1,fontWeight:700,fontSize:"15.5px"}},st[0]),el("span",{class:"mono",style:{fontSize:"11px",color:"var(--text3)"}},(i+1<10?"0":"")+(i+1)),dot]);
+    rows.push({card:card,box:box,dot:dot,hot:hot,ic:st[1]});
+    list.appendChild(reveal(card,i*55));
+  });
+  // active-state walk animation
+  var active=0;
+  setInterval(function(){
+    rows.forEach(function(r,i){
+      var on=i===active;
+      r.card.style.transform=on?"scale(1.025)":"scale(1)";
+      r.card.style.borderColor=on?C.primary+"99":(r.hot?v("--card-strong"):v("--card-border"));
+      r.card.style.background=on?"rgba(124,92,255,0.10)":(r.hot?"rgba(124,92,255,0.06)":"var(--card)");
+      r.box.style.background=on?"rgba(124,92,255,0.22)":(r.hot?"rgba(124,92,255,0.16)":"var(--card)");
+      r.box.innerHTML="";r.box.appendChild(IC[r.ic](20,on?C.secondary:(r.hot?C.secondary:"var(--text2)")));
+      r.dot.style.background=on?C.trust:v("--card-strong");
+      if(on)r.dot.style.boxShadow="0 0 12px "+C.trust;else r.dot.style.boxShadow="none";
+    });
+    active=(active+1)%rows.length;
+  },900);
+  return el("section",{id:"how"},el("div",{class:"wrap"},[
+    el("div",{style:{textAlign:"center",marginBottom:"8px"}},reveal(eyebrow("The decision pipeline"))),
+    h2(txt("How "),el("span",{class:"gradtext"},"ChainSage"),txt(" Works")),
+    list]));
+}
+
+/* ============ SECTION 4 — Interactive Product Demo ============ */
+function buildDemo(){
+  /* ----- LEFT SIDEBAR: brand, wallet, total value, tokens, nav ----- */
+  var tokens=[
+    {sym:"ETH",name:"Ethereum",amt:"4.82 ETH",val:"$14,210",chg:"+5.2%",chgc:C.trust,bg:"rgba(98,126,234,0.18)",fg:"#9CB0F5"},
+    {sym:"USDC",name:"USD Coin",amt:"6,200 USDC",val:"$6,200",chg:"stable",chgc:"var(--text3)",bg:"rgba(39,117,202,0.16)",fg:"#5B8DEF"},
+    {sym:"ARB",name:"Arbitrum",amt:"2,840 ARB",val:"$2,840",chg:"-2.1%",chgc:C.danger,bg:"rgba(150,160,180,0.18)",fg:"#B8C0D0"},
+    {sym:"UNI",name:"Uniswap",amt:"190 UNI",val:"$1,580",chg:"+1.8%",chgc:C.trust,bg:"rgba(255,120,196,0.16)",fg:"#FF78C4"}
+  ];
+  var navItems=[["Portfolio","gauge",true],["Tx guardian","shield",false],["DeFi advisor","spark",false],["Tx history","layers",false]];
+  var tokenList=el("div",{style:{display:"flex",flexDirection:"column",gap:"18px",marginTop:"18px"}},tokens.map(function(t){
+    return el("div",{style:{display:"flex",alignItems:"center",gap:"12px"}},[
+      el("span",{class:"iconbox",style:{width:"38px",height:"38px",borderRadius:"50%",background:t.bg,color:t.fg,fontSize:"11px",fontWeight:800,fontFamily:"'JetBrains Mono',monospace"}},t.sym),
+      el("div",{style:{flex:1}},[el("div",{style:{fontSize:"14px",fontWeight:700}},t.name),el("div",{class:"mono",style:{fontSize:"11.5px",color:"var(--text3)"}},t.amt)]),
+      el("div",{style:{textAlign:"right"}},[el("div",{class:"mono",style:{fontSize:"14px",fontWeight:700}},t.val),el("div",{class:"mono",style:{fontSize:"11.5px",color:t.chgc}},t.chg)])
+    ]);
+  }));
+  var navList=el("div",{style:{marginTop:"auto",display:"flex",flexDirection:"column",gap:"3px"}},navItems.map(function(n){
+    return el("div",{style:{display:"flex",alignItems:"center",gap:"11px",padding:"11px 13px",borderRadius:"12px",fontSize:"14px",fontWeight:n[2]?600:500,background:n[2]?"var(--card)":"transparent",border:n[2]?"1px solid var(--card-border)":"1px solid transparent",color:n[2]?"var(--text)":"var(--text2)",cursor:"pointer",transition:"background .2s"}},[IC[n[1]](17,n[2]?C.secondary:"var(--text2)"),n[0]]);
+  }));
+  var left=el("div",{class:"demo-side",style:{padding:"22px 20px",borderRight:"1px solid var(--card-border)",display:"flex",flexDirection:"column"}},[
+    el("div",{style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"22px"}},[mark(28),el("span",{style:{fontWeight:800,fontSize:"19px",letterSpacing:"-0.02em"}},"ChainSage")]),
+    el("div",{class:"glass",style:{borderRadius:"13px",padding:"11px 14px",display:"flex",alignItems:"center",gap:"9px",marginBottom:"22px"}},[el("span",{style:{width:"8px",height:"8px",borderRadius:"50%",background:C.trust,flexShrink:0}}),el("span",{class:"mono",style:{fontSize:"13px",color:"var(--text2)"}},"0x3a4f…d9c2")]),
+    el("div",{class:"mono",style:{fontSize:"12px",color:"var(--text3)",letterSpacing:".08em",fontWeight:600}},"TOTAL VALUE"),
+    el("div",{style:{fontSize:"38px",fontWeight:800,letterSpacing:"-0.02em",marginTop:"4px"}},"$24,830"),
+    el("span",{style:{display:"inline-flex",alignSelf:"flex-start",alignItems:"center",gap:"5px",marginTop:"10px",padding:"5px 11px",borderRadius:"999px",background:"rgba(52,211,153,0.14)",color:C.trust,fontSize:"12.5px",fontWeight:700}},[txt("▲ +4.7% today")]),
+    tokenList,
+    navList
+  ]);
+
+  /* ----- CENTER: header, quick chips, chat, input ----- */
+  var chatArea=el("div",{style:{flex:1,display:"flex",flexDirection:"column",gap:"16px",overflowY:"auto",padding:"4px 2px",minHeight:"300px",maxHeight:"440px"}});
+  function bubbleUser(text){
+    return el("div",{class:"brandgrad",style:{alignSelf:"flex-end",maxWidth:"70%",fontSize:"14px",lineHeight:1.45,padding:"12px 16px",borderRadius:"18px 18px 6px 18px",color:"#fff"}},text);
+  }
+  function avatar(){return el("span",{class:"brandgrad iconbox",style:{width:"34px",height:"34px",borderRadius:"11px",flexShrink:0,alignSelf:"flex-start"}},IC.bot(18,"#fff"));}
+  function bubbleAgentText(node){
+    return el("div",{style:{display:"flex",gap:"12px",alignSelf:"stretch"}},[avatar(),el("div",{class:"glass",style:{flex:1,fontSize:"14px",lineHeight:1.55,padding:"15px 18px",borderRadius:"6px 18px 18px 18px",color:"var(--text)"}},node)]);
+  }
+  function riskCard(){
+    var rows=[
+      ["Overall risk score","Medium (62/100)",C.warning],
+      ["ETH concentration","57% — high",C.danger],
+      ["Stablecoin buffer","25% — healthy",C.trust],
+      ["DeFi exposure","0% — none","var(--text2)"],
+      ["Rug-pull risk tokens","None detected",C.trust]
+    ];
+    return el("div",{style:{display:"flex",gap:"12px",alignSelf:"stretch"}},[avatar(),
+      el("div",{class:"glass",style:{flex:1,padding:"15px 18px",borderRadius:"6px 18px 18px 18px"}},[
+        el("div",{style:{fontSize:"14px",lineHeight:1.5,marginBottom:"14px"}},"I've analyzed your wallet and on-chain activity. Here's what I found:"),
+        el("div",{style:{borderRadius:"14px",overflow:"hidden",border:"1px solid var(--card-border)"}},rows.map(function(r,i){
+          return el("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"13px 16px",borderBottom:i<rows.length-1?"1px solid var(--card-border)":"none"}},[
+            el("span",{style:{fontSize:"13.5px",color:"var(--text2)"}},r[0]),
+            el("span",{style:{fontSize:"13.5px",fontWeight:600,color:r[2]}},r[1])]);
+        }))])]);
+  }
+  function typing(){
+    return el("div",{style:{display:"flex",gap:"12px"}},[avatar(),el("div",{class:"glass",style:{padding:"15px 18px",borderRadius:"6px 18px 18px 18px",display:"flex",gap:"5px"}},[0,1,2].map(function(i){return el("span",{style:{width:"7px",height:"7px",borderRadius:"50%",background:"var(--text3)",animation:"floaty 1s ease-in-out infinite",animationDelay:(i*0.15)+"s"}});}))]);
+  }
+
+  // seed conversation
+  chatArea.appendChild(bubbleAgentText([
+    el("div",{html:'Hi! I\'m connected to your wallet <b>0x3a4f…d9c2</b>. Your portfolio is worth <b>$24,830</b> — up 4.7% today.'}),
+    el("div",{style:{marginTop:"12px"},html:'Ask me anything: what\'s earning yield, whether a swap is safe, what a transaction did, or what your biggest risks are.'})
+  ]));
+
+  // canned responses keyed by intent
+  function respondTo(q){
+    q=q.toLowerCase();
+    if(q.indexOf("risk")>-1||q.indexOf("safe")>-1||q.indexOf("analy")>-1) return {card:true};
+    if(q.indexOf("yield")>-1||q.indexOf("usdc")>-1||q.indexOf("earn")>-1) return {node:[el("div",{html:'Your <b>6,200 USDC</b> is sitting idle. <b style="color:'+C.trust+'">Aave on Base</b> is paying ~5.1% — about <b>+$316/yr</b> at low risk. Want me to simulate the deposit first?'})]};
+    if(q.indexOf("swap")>-1||q.indexOf("simul")>-1) return {node:[el("div",{html:'Simulating: <b>swap 500 USDC → ETH</b>. Result — you receive ~<b>0.143 ETH</b>, no approval changes, slippage 0.2%. <b style="color:'+C.trust+'">Verdict: ALLOW.</b>'}),el("div",{class:"mono",style:{marginTop:"9px",fontSize:"11.5px",color:"var(--text3)"}},"simulated on live Base state · 38ms")]};
+    if(q.indexOf("recap")>-1||q.indexOf("wallet")>-1) return {node:[el("div",{html:'You hold <b>4.82 ETH</b>, <b>6,200 USDC</b>, <b>2,840 ARB</b>, and <b>190 UNI</b> — total <b>$24,830</b>, up 4.7%. ETH is 57% of the book (a touch concentrated). No suspicious approvals.'})]};
+    return {node:[el("div",{html:'I read only your on-chain state, so I stay grounded in facts. Try asking about your <b>risks</b>, the <b>best USDC yield</b>, or whether a <b>swap is safe</b> before you sign.'})]};
+  }
+  function scrollBottom(){chatArea.scrollTop=chatArea.scrollHeight;}
+  function sendMessage(text){
+    if(!text||!text.trim())return;
+    chatArea.appendChild(bubbleUser(text.trim()));
+    scrollBottom();
+    var tp=typing();chatArea.appendChild(tp);scrollBottom();
+    var r=respondTo(text);
+    setTimeout(function(){
+      chatArea.removeChild(tp);
+      chatArea.appendChild(r.card?riskCard():bubbleAgentText(r.node));
+      scrollBottom();
+    },1100);
+  }
+
+  var chips=["Wallet recap","Best USDC yields","Simulate swap","Risk check"];
+  var chipRow=el("div",{style:{display:"flex",gap:"9px",flexWrap:"wrap",marginBottom:"18px"}},chips.map(function(c){
+    return el("button",{class:"glass",style:{fontSize:"12.5px",color:"var(--text2)",borderRadius:"999px",padding:"8px 15px",display:"inline-flex",alignItems:"center",gap:"6px",cursor:"pointer"},onclick:function(){sendMessage(c);}},[c,el("span",{style:{color:"var(--text3)",fontSize:"11px"}},"↗")]);
+  }));
+
+  var input=el("input",{type:"text",placeholder:"Ask about your wallet, a token, or a DeFi move…",style:{flex:1,background:"transparent",border:"none",outline:"none",color:"var(--text)",fontSize:"14px",fontFamily:"'Hanken Grotesk',sans-serif"}});
+  input.addEventListener("keydown",function(ev){if(ev.key==="Enter"){sendMessage(input.value);input.value="";}});
+  var sendBtn=el("button",{class:"glass",style:{width:"46px",height:"46px",borderRadius:"13px",display:"grid",placeItems:"center",flexShrink:0,cursor:"pointer"},onclick:function(){sendMessage(input.value);input.value="";}},IC.send(17,C.secondary));
+  var inputBar=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",marginTop:"16px"}},[
+    el("div",{class:"glass",style:{flex:1,borderRadius:"15px",padding:"4px 8px 4px 18px",display:"flex",alignItems:"center",height:"54px"}},input),
+    sendBtn]);
+
+  var header=el("div",{style:{display:"flex",alignItems:"center",gap:"13px",paddingBottom:"18px",borderBottom:"1px solid var(--card-border)",marginBottom:"18px"}},[
+    el("span",{class:"brandgrad iconbox",style:{width:"40px",height:"40px",borderRadius:"13px"}},IC.bot(21,"#fff")),
+    el("div",{},[el("div",{style:{fontSize:"16px",fontWeight:800}},"ChainSage agent"),el("div",{class:"mono",style:{fontSize:"11.5px",color:"var(--text3)"}},"Powered by ChainSage Trust Layer · the verdict engine")])
+  ]);
+  var center=el("div",{style:{padding:"22px",display:"flex",flexDirection:"column",minHeight:"560px"}},[header,chipRow,chatArea,inputBar]);
+
+  var frame=el("div",{class:"demo3",style:{display:"grid",gridTemplateColumns:"340px 1fr",minHeight:"600px",borderRadius:"20px",overflow:"hidden",background:"var(--bg2)"}},[left,center]);
+  var shell=reveal(el("div",{class:"glass",style:{borderRadius:"26px",padding:"10px"}},frame));
+
+  return el("section",{id:"demo"},el("div",{class:"wrap"},[
+    el("div",{style:{textAlign:"center",marginBottom:"8px"}},reveal(eyebrow("The product"))),
+    h2(txt("An agent you "),el("span",{class:"gradtext"},"converse with")),
+    reveal(el("p",{style:{textAlign:"center",color:"var(--text2)",fontSize:"17px",maxWidth:"560px",margin:"22px auto 50px",lineHeight:1.6}},"Your wallet on the left, a grounded financial agent on the right. Ask about risk, yield, or whether a transaction is safe — every answer is checked before anything touches the chain.")),
+    shell]));
+}
+
+/* ============ SECTION 5 — Roadmap ============ */
+function buildRoadmap(){
+  var phases=[
+    {n:"01",t:"Guardian",d:"Wallet protection and transaction intelligence.",ic:"shield",c:C.accent},
+    {n:"02",t:"Risk API",d:"Trust infrastructure for wallets and apps.",ic:"term",c:"#6E83F0"},
+    {n:"03",t:"Agent SDK",d:"chainsage.check(intent) before every signature.",ic:"bot",c:"#8A78F4",mono:true},
+    {n:"04",t:"Policy Engine",d:"Runtime rules for autonomous agents.",ic:"lock",c:C.secondary},
+    {n:"05",t:"Trust Network",d:"Shared reputation layer for autonomous finance.",ic:"net",c:C.p3,hot:true}
+  ];
+  var grid=el("div",{class:"grid5",style:{marginTop:"60px"}},phases.map(function(p,i){
+    return reveal(el("div",{class:"glass",style:{borderRadius:"20px",padding:"22px",height:"100%",position:"relative",overflow:"hidden",borderColor:p.hot?"var(--card-strong)":""}},[
+      p.hot?el("div",{style:{position:"absolute",top:"-40px",right:"-40px",width:"140px",height:"140px",borderRadius:"50%",background:"radial-gradient(circle,rgba(185,165,255,0.25),transparent 70%)"}}):null,
+      el("div",{class:"iconbox",style:{width:"44px",height:"44px",borderRadius:"13px",marginBottom:"18px",background:p.c+"22"}},IC[p.ic](20,p.c)),
+      el("div",{class:"mono",style:{fontSize:"12px",color:"var(--text3)",marginBottom:"5px"}},"PHASE "+p.n),
+      el("div",{style:{fontWeight:800,fontSize:"17px",marginBottom:"8px"}},p.t),
+      el("div",{class:p.mono?"mono":"",style:{fontSize:p.mono?"12px":"13.5px",color:"var(--text2)",lineHeight:1.55}},p.d)]),i*90);
+  }));
+  return el("section",{id:"roadmap"},el("div",{class:"wrap"},[
+    el("div",{style:{textAlign:"center",marginBottom:"8px"}},reveal(eyebrow("Wedge → standard"))),
+    h2(txt("From Guardian to "),el("span",{class:"gradtext"},"Global Trust Network")),
+    grid]));
+}
+
+/* ============ SECTION 6 — Trust Network ============ */
+function buildNetwork(){
+  var nodes=[
+    {id:0,x:50,y:20,r:17,t:"safe",v:true,name:"USDC",kind:"contract"},
+    {id:1,x:22,y:40,r:14,t:"safe",name:"Aave",kind:"protocol"},
+    {id:2,x:78,y:38,r:14,t:"safe",name:"Aerodrome",kind:"protocol"},
+    {id:3,x:50,y:52,r:19,t:"safe",core:true,name:"Your Agent",kind:"agent"},
+    {id:4,x:28,y:74,r:13,t:"caution",name:"ArbAgent-7",kind:"agent"},
+    {id:5,x:72,y:74,r:13,t:"caution",name:"FastRouter",kind:"contract"},
+    {id:6,x:50,y:88,r:15,t:"caution",drain:true,name:"0x9f3c…11Ab",kind:"contract"}
+  ];
+  var edges=[[0,3],[1,3],[2,3],[1,0],[2,0],[3,4],[3,5],[4,6],[5,6]];
+  function col(t){return {safe:C.trust,caution:C.warning,danger:C.danger}[t];}
+  var burned=false,pn=847213,selected=3;
+  var svg=sv("svg",{viewBox:"0 0 100 100"});svg.style.width="100%";svg.style.cursor="pointer";
+  function draw(){
+    svg.innerHTML="";
+    edges.forEach(function(ed){var a=nodes[ed[0]],b=nodes[ed[1]];var bad=burned&&(a.drain||b.drain||a.t==="danger"||b.t==="danger");svg.appendChild(sv("line",{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:bad?C.danger:"rgba(140,140,170,0.25)","stroke-width":bad?0.7:0.4,"stroke-dasharray":bad?"1 1":""}));});
+    nodes.forEach(function(n){var c=col(n.t);var sel=selected===n.id;var g=sv("g");g.style.cursor="pointer";
+      if(sel)g.appendChild(sv("circle",{cx:n.x,cy:n.y,r:n.r/2+4,fill:"none",stroke:c,"stroke-opacity":0.4,"stroke-width":1.2}));
+      g.appendChild(sv("circle",{cx:n.x,cy:n.y,r:n.r/2+2.5,fill:"none",stroke:c,"stroke-opacity":0.5,"stroke-width":0.8}));
+      g.appendChild(sv("circle",{cx:n.x,cy:n.y,r:n.r/2,fill:"var(--bg2)",stroke:n.core||sel?c:"rgba(140,140,170,0.4)","stroke-width":n.core||sel?1:0.6}));
+      var fo=sv("foreignObject",{x:n.x-3,y:n.y-3,width:6,height:6});var d=document.createElement("div");d.style.cssText="display:grid;place-items:center;height:100%";
+      var ki=n.kind==="agent"?IC.bot(3.4,c):(n.kind==="protocol"?IC.layers(3.4,c):IC.cpu(3.4,c));d.appendChild(ki);fo.appendChild(d);g.appendChild(fo);
+      if(n.v)g.appendChild(sv("circle",{cx:n.x+n.r/2-1,cy:n.y-n.r/2+1,r:1.6,fill:C.trust}));
+      g.addEventListener("click",function(){selected=n.id;draw();paintPanel();});
+      svg.appendChild(g);
+    });
+  }
+  // side panel
+  var panelName=el("div",{style:{fontSize:"17px",fontWeight:800}},"");
+  var panelMeta=el("div",{class:"mono",style:{fontSize:"11px",color:"var(--text3)",marginTop:"3px"}},"");
+  var panelScore=el("div",{style:{fontSize:"30px",fontWeight:800}},"");
+  var panelBadge=el("span",{});
+  function paintPanel(){
+    var n=nodes[selected];var c=col(n.t);
+    panelName.textContent=n.name;
+    panelMeta.textContent=n.kind+" · "+(n.t==="safe"?"trusted":n.t==="caution"?"caution":"flagged");
+    panelScore.textContent=(n.t==="safe"?"0.9"+(n.core?2:1):n.t==="caution"?"0.5"+n.id:"0.0"+n.id);
+    panelScore.style.color=c;
+    panelBadge.innerHTML="";panelBadge.appendChild(el("span",{style:{display:"inline-flex",alignItems:"center",gap:"5px",padding:"4px 10px",borderRadius:"999px",fontSize:"11px",fontWeight:700,background:c+"22",color:c}},[n.t==="safe"?IC.checkc(12,c):n.t==="caution"?IC.hand(12,c):IC.ban(12,c),n.t==="safe"?"Trusted":n.t==="caution"?"Review":"Denied"]));
+  }
+  draw();paintPanel();
+
+  var pnEl=el("div",{class:"mono",style:{fontSize:"24px",fontWeight:800,color:C.trust}},pn.toLocaleString());
+  var feed=el("div",{style:{marginTop:"14px",display:"flex",flexDirection:"column",gap:"5px",minHeight:"0"}});
+  var btn=el("button",{class:"btnp",style:{background:C.danger,padding:"13px 20px",fontSize:"14.5px",width:"100%"}},[IC.radio(16,"#fff"),"Simulate Drainer Incident"]);
+  function feedLine(text,c){var l=el("div",{class:"mono",style:{fontSize:"11px",color:c,display:"flex",gap:"7px",opacity:0,transform:"translateX(-6px)",transition:"all .4s"}},[el("span",{},"●"),el("span",{style:{color:"var(--text2)"}},text)]);feed.appendChild(l);setTimeout(function(){l.style.opacity=1;l.style.transform="none";},50);return l;}
+  btn.addEventListener("click",function(){
+    if(burned)return;burned=true;
+    btn.style.background="var(--card)";btn.style.boxShadow="none";btn.style.color="var(--text3)";btn.innerHTML="";btn.appendChild(IC.check(16,"var(--text3)"));btn.appendChild(txt("Propagated across the network"));
+    feedLine("Incident reported · 0x9f3c…11Ab drained a wallet",C.danger);
+    setTimeout(function(){nodes[6].t="danger";draw();if(selected===6)paintPanel();feedLine("Trust 0.18 → 0.02 · contract flagged",C.danger);},700);
+    setTimeout(function(){nodes[4].t="danger";nodes[5].t="danger";draw();feedLine("2 connected nodes downgraded automatically",C.warning);},1500);
+    setTimeout(function(){feedLine("Second-degree connections flagged for review",C.warning);},2300);
+    setTimeout(function(){var i=0,jump=4280;var t=setInterval(function(){pn+=Math.floor(Math.random()*900+300);pnEl.textContent=pn.toLocaleString();if(++i>6)clearInterval(t);},120);feedLine("+"+jump.toLocaleString()+" wallets protected — instantly",C.trust);},3000);
+  });
+
+  var graphCard=reveal(el("div",{class:"glass",style:{borderRadius:"26px",padding:"18px"}},svg));
+  var sidePanel=el("div",{},[
+    reveal(el("div",{class:"glass",style:{borderRadius:"18px",padding:"20px",marginBottom:"16px"}},[
+      el("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"12px"}},[el("div",{},[panelName,panelMeta]),panelBadge]),
+      el("div",{style:{display:"flex",alignItems:"baseline",gap:"8px"}},[panelScore,el("span",{style:{fontSize:"12px",color:"var(--text3)"}},"trust score")]),
+      el("div",{style:{fontSize:"12.5px",color:"var(--text2)",marginTop:"10px",lineHeight:1.5}},"Reputation is computed from direct history, peer attestations, and signals propagated across the network.")])),
+    reveal(el("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"14px",marginBottom:"16px"}},[
+      el("div",{class:"glass",style:{borderRadius:"16px",padding:"18px"}},[el("div",{class:"mono",style:{fontSize:"10.5px",color:"var(--text3)",textTransform:"uppercase",marginBottom:"4px"}},"Protected"),pnEl]),
+      el("div",{class:"glass",style:{borderRadius:"16px",padding:"18px"}},[el("div",{class:"mono",style:{fontSize:"10.5px",color:"var(--text3)",textTransform:"uppercase",marginBottom:"4px"}},"Attestations"),el("div",{class:"mono",style:{fontSize:"24px",fontWeight:800}},"3.41M")])])),
+    reveal(el("div",{class:"glass",style:{borderRadius:"18px",padding:"18px"}},[btn,feed]))
+  ]);
+
+  return el("section",{id:"network",style:{position:"relative"}},el("div",{class:"wrap"},[
+    el("div",{style:{textAlign:"center",marginBottom:"8px"}},reveal(eyebrow("The centerpiece"))),
+    h2(txt("When One Wallet Gets Burned, "),el("span",{class:"gradtext"},"Everyone Learns.")),
+    reveal(el("p",{style:{textAlign:"center",color:"var(--text2)",fontSize:"17px",maxWidth:"600px",margin:"22px auto 0",lineHeight:1.6}},"Tap any node to inspect its trust. Then fire an incident and watch a threat signal ripple across the entire network in real time.")),
+    el("div",{class:"twocol",style:{marginTop:"54px",display:"grid",gridTemplateColumns:"1.1fr 1fr",gap:"28px",alignItems:"center"}},[graphCard,sidePanel])]));
+}
+
+/* ============ SECTION 7 — Why Now ============ */
+function buildWhyNow(){
+  var cards=[
+    {ic:"zap",t:"x402",d:"HTTP-native machine payments are live on Base."},
+    {ic:"file",t:"AP2",d:"Agent payment authorization is standardizing."},
+    {ic:"bot",t:"Agent Protocols",d:"Autonomous execution frameworks are shipping."},
+    {ic:"shield",t:"ChainSage",d:"The decision layer that makes it safe.",hot:true}
+  ];
+  var grid=el("div",{style:{marginTop:"60px",display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"16px"},class:"grid-why"},cards.map(function(c,i){
+    return reveal(el("div",{class:"glass",style:{borderRadius:"20px",padding:"24px",height:"100%",borderColor:c.hot?"var(--card-strong)":"",background:c.hot?"rgba(124,92,255,0.06)":""}},[
+      el("span",{class:"iconbox",style:{width:"46px",height:"46px",borderRadius:"13px",marginBottom:"16px",background:c.hot?"rgba(124,92,255,0.16)":"var(--card)"}},IC[c.ic](20,c.hot?C.secondary:"var(--text2)")),
+      el("div",{style:{fontWeight:800,fontSize:"17px",marginBottom:"7px"}},c.t),
+      el("div",{style:{fontSize:"13.5px",color:"var(--text2)",lineHeight:1.5}},c.d)]),i*80);
+  }));
+  // responsive
+  var media=el("style",{},"@media(max-width:900px){.grid-why{grid-template-columns:1fr 1fr!important;}}@media(max-width:520px){.grid-why{grid-template-columns:1fr!important;}}");
+  document.head.appendChild(media);
+  return el("section",{},el("div",{class:"wrap"},[
+    el("div",{style:{textAlign:"center",marginBottom:"8px"}},reveal(eyebrow("Why now"))),
+    h2(txt("The Rails Are "),el("span",{class:"gradtext"},"Arriving.")),
+    reveal(el("p",{style:{textAlign:"center",color:"var(--text2)",fontSize:"17px",maxWidth:"580px",margin:"22px auto 0",lineHeight:1.6}},"Money movement and permission for agents are being standardized right now. The judgment layer between them is the category being created — and it's still open.")),
+    grid]));
+}
+
+/* ============ SECTION 8 — Final CTA ============ */
+function buildCTA(){
+  var emailInput=el("input",{type:"email",placeholder:"you@company.com",style:{flex:"1 1 200px",background:"var(--card)",border:"1px solid var(--card-border)",borderRadius:"14px",padding:"15px 18px",fontSize:"15px",outline:"none",color:"var(--text)"}});
+  var form=el("div",{style:{marginTop:"36px",display:"flex",gap:"12px",maxWidth:"460px",marginLeft:"auto",marginRight:"auto",flexWrap:"wrap"}});
+  var submit=el("button",{class:"btnp brandgrad",style:{padding:"15px 26px",fontSize:"15px",whiteSpace:"nowrap"}},[el("span",{class:"sheen"}),"Join Waitlist"]);
+  form.appendChild(emailInput);form.appendChild(submit);
+  submit.addEventListener("click",function(){
+    if(emailInput.value.indexOf("@")>-1){
+      var done=el("div",{class:"glass",style:{marginTop:"36px",display:"inline-flex",alignItems:"center",gap:"10px",borderRadius:"14px",padding:"15px 22px",borderColor:"rgba(52,211,153,0.4)"}},[IC.checkc(18,C.trust),el("span",{style:{fontSize:"15px",color:C.trust}},"You're on the list. We'll be in touch.")]);
+      form.parentNode.replaceChild(done,form);
+    }
+  });
+  var inner=el("div",{style:{position:"relative",textAlign:"center"}},[
+    el("div",{style:{display:"flex",justifyContent:"center"}},mark(54)),
+    el("h2",{style:{marginTop:"24px",fontSize:"clamp(32px,6vw,52px)",fontWeight:900,letterSpacing:"-0.03em",lineHeight:1.08}},[txt("Help Build the Trust Layer for "),el("span",{class:"gradtext"},"Autonomous Finance")]),
+    el("p",{style:{marginTop:"18px",fontSize:"17px",color:"var(--text2)",maxWidth:"520px",marginLeft:"auto",marginRight:"auto",lineHeight:1.6}},"The verdict every autonomous action checks before it touches the chain. Be early."),
+    form
+  ]);
+  return el("section",{id:"cta"},el("div",{style:{maxWidth:"800px",margin:"0 auto",padding:"0 24px"}},
+    reveal(el("div",{class:"glass",style:{borderRadius:"30px",padding:"clamp(40px,7vw,72px) 32px",position:"relative",overflow:"hidden"}},[
+      el("div",{style:{position:"absolute",top:"-100px",left:"50%",transform:"translateX(-50%)",width:"360px",height:"360px",borderRadius:"50%",pointerEvents:"none",background:"radial-gradient(circle,rgba(124,92,255,0.22),transparent 70%)"}}),inner]))));
+}
+
+/* ============ FOOTER ============ */
+function buildFooter(){
+  var prod=el("div",{},[el("div",{class:"mono",style:{fontSize:"12px",color:"var(--text3)",textTransform:"uppercase",marginBottom:"12px"}},"Product")].concat(["Guardian","Agent SDK","Policy Engine","Trust Network"].map(function(l){return el("a",{href:"#",style:{display:"block",fontSize:"14px",color:"var(--text2)",padding:"4px 0"}},l);})));
+  var comp=el("div",{},[el("div",{class:"mono",style:{fontSize:"12px",color:"var(--text3)",textTransform:"uppercase",marginBottom:"12px"}},"Company")].concat(["Documentation","GitHub","X","Waitlist"].map(function(l){return el("a",{href:l==="Waitlist"?"#cta":"#",style:{display:"block",fontSize:"14px",color:"var(--text2)",padding:"4px 0"}},l);})));
+  var cols=el("div",{style:{display:"flex",justifyContent:"space-between",gap:"40px",flexWrap:"wrap"}},[
+    el("div",{style:{maxWidth:"380px"}},[el("div",{style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"16px"}},[mark(32),el("span",{style:{fontWeight:800,fontSize:"19px"}},"ChainSage")]),el("div",{style:{color:"var(--text2)",fontSize:"14px",marginBottom:"14px"}},"Trust Layer for Autonomous Finance"),el("div",{class:"mono",style:{color:"var(--text3)",fontSize:"13px",lineHeight:1.6}},"Settlement moves money. Authorization grants permission. ChainSage decides whether it should happen.")]),
+    el("div",{style:{display:"flex",gap:"60px"}},[prod,comp])]);
+  return el("footer",{style:{padding:"64px 24px 48px",borderTop:"1px solid var(--card-border)",position:"relative",zIndex:1}},el("div",{class:"wrap"},[cols,
+    el("div",{style:{marginTop:"48px",paddingTop:"24px",borderTop:"1px solid var(--card-border)",display:"flex",justifyContent:"space-between",gap:"12px",flexWrap:"wrap",fontSize:"12.5px",color:"var(--text3)"}},[el("span",{},"© 2026 ChainSage. All rights reserved."),el("span",{class:"mono"},"The verdict before execution.")])]));
+}
+
+/* ============ PARALLAX on orbs ============ */
+function initParallax(){
+  var orb2=document.querySelector(".orb2"),orb3=document.querySelector(".orb3");
+  if(!orb2)return;
+  window.addEventListener("scroll",function(){
+    var y=window.pageYOffset;
+    orb2.style.transform="translateY("+(y*0.08)+"px)";
+    orb3.style.transform="translateY("+(-y*0.05)+"px)";
+  },{passive:true});
+}
+
+/* ============ MOUNT ============ */
+try{
+  // restore theme
+  try{var saved=localStorage.getItem("cs-theme");if(saved)document.documentElement.setAttribute("data-theme",saved);}catch(e){}
+  var root=document.getElementById("root");
+  root.appendChild(buildNav());
+  root.appendChild(buildHero());
+  root.appendChild(buildLayer());
+  root.appendChild(buildHow());
+  root.appendChild(buildDemo());
+  root.appendChild(buildRoadmap());
+  root.appendChild(buildNetwork());
+  root.appendChild(buildWhyNow());
+  root.appendChild(buildCTA());
+  root.appendChild(buildFooter());
+  initParallax();
+}catch(err){
+  document.getElementById("root").innerHTML='<div style="min-height:100vh;display:grid;place-items:center;color:#F4534F;font-family:monospace;padding:24px;text-align:center">Render error: '+(err&&err.message)+'</div>';
+}
+})();
+</script>
+</body>
+</html>
