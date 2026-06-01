@@ -87,8 +87,22 @@
     .grid3,.grid5{grid-template-columns:1fr;}
     .herogrid,.twocol{grid-template-columns:1fr!important;}
     .navlinks{display:none!important;}
-    .demo3{grid-template-columns:1fr!important;}
-    .demo-side{border-right:none!important;border-bottom:1px solid var(--card-border)!important;}
+    .demo3{grid-template-columns:1fr!important;min-height:0!important;}
+    /* mobile = clean single-column chat (per design): hide portfolio + input */
+    .demo-side{display:none!important;}
+    .demo-input{display:none!important;}
+    .demo-center{min-height:0!important;padding:20px 16px!important;}
+    /* center the header */
+    .demo-header{flex-direction:column!important;text-align:center!important;gap:4px!important;border-bottom:none!important;padding-bottom:10px!important;margin-bottom:6px!important;}
+    .demo-header-icon{display:none!important;}
+    /* chips drop to the bottom */
+    .demo-chips{order:3!important;margin:18px 0 0!important;justify-content:center!important;flex-wrap:wrap!important;}
+    .demo-chat{order:2!important;max-height:none!important;min-height:320px!important;}
+    .demo-shell{padding:8px!important;border-radius:22px!important;}
+  }
+  @media (max-width:600px){
+    .demo-bubble-user{max-width:88%!important;}
+    .demo-chips button{flex:0 0 auto!important;white-space:nowrap!important;}
   }
 </style>
 </head>
@@ -397,9 +411,9 @@ function buildDemo(){
   ]);
 
   /* ----- CENTER: header, quick chips, chat, input ----- */
-  var chatArea=el("div",{style:{flex:1,display:"flex",flexDirection:"column",gap:"16px",overflowY:"auto",padding:"4px 2px",minHeight:"300px",maxHeight:"440px"}});
+  var chatArea=el("div",{class:"demo-chat",style:{flex:1,display:"flex",flexDirection:"column",gap:"16px",overflowY:"auto",padding:"4px 2px",minHeight:"300px",maxHeight:"440px"}});
   function bubbleUser(text){
-    return el("div",{class:"brandgrad",style:{alignSelf:"flex-end",maxWidth:"70%",fontSize:"14px",lineHeight:1.45,padding:"12px 16px",borderRadius:"18px 18px 6px 18px",color:"#fff"}},text);
+    return el("div",{class:"brandgrad demo-bubble-user",style:{alignSelf:"flex-end",maxWidth:"70%",fontSize:"14px",lineHeight:1.45,padding:"12px 16px",borderRadius:"18px 18px 6px 18px",color:"#fff"}},text);
   }
   function avatar(){return el("span",{class:"brandgrad iconbox",style:{width:"34px",height:"34px",borderRadius:"11px",flexShrink:0,alignSelf:"flex-start"}},IC.bot(18,"#fff"));}
   function bubbleAgentText(node){
@@ -456,25 +470,25 @@ function buildDemo(){
   }
 
   var chips=["Wallet recap","Best USDC yields","Simulate swap","Risk check"];
-  var chipRow=el("div",{style:{display:"flex",gap:"9px",flexWrap:"wrap",marginBottom:"18px"}},chips.map(function(c){
+  var chipRow=el("div",{class:"demo-chips",style:{display:"flex",gap:"9px",flexWrap:"wrap",marginBottom:"18px"}},chips.map(function(c){
     return el("button",{class:"glass",style:{fontSize:"12.5px",color:"var(--text2)",borderRadius:"999px",padding:"8px 15px",display:"inline-flex",alignItems:"center",gap:"6px",cursor:"pointer"},onclick:function(){sendMessage(c);}},[c,el("span",{style:{color:"var(--text3)",fontSize:"11px"}},"↗")]);
   }));
 
   var input=el("input",{type:"text",placeholder:"Ask about your wallet, a token, or a DeFi move…",style:{flex:1,background:"transparent",border:"none",outline:"none",color:"var(--text)",fontSize:"14px",fontFamily:"'Hanken Grotesk',sans-serif"}});
   input.addEventListener("keydown",function(ev){if(ev.key==="Enter"){sendMessage(input.value);input.value="";}});
   var sendBtn=el("button",{class:"glass",style:{width:"46px",height:"46px",borderRadius:"13px",display:"grid",placeItems:"center",flexShrink:0,cursor:"pointer"},onclick:function(){sendMessage(input.value);input.value="";}},IC.send(17,C.secondary));
-  var inputBar=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",marginTop:"16px"}},[
+  var inputBar=el("div",{class:"demo-input",style:{display:"flex",alignItems:"center",gap:"10px",marginTop:"16px"}},[
     el("div",{class:"glass",style:{flex:1,borderRadius:"15px",padding:"4px 8px 4px 18px",display:"flex",alignItems:"center",height:"54px"}},input),
     sendBtn]);
 
-  var header=el("div",{style:{display:"flex",alignItems:"center",gap:"13px",paddingBottom:"18px",borderBottom:"1px solid var(--card-border)",marginBottom:"18px"}},[
-    el("span",{class:"brandgrad iconbox",style:{width:"40px",height:"40px",borderRadius:"13px"}},IC.bot(21,"#fff")),
-    el("div",{},[el("div",{style:{fontSize:"16px",fontWeight:800}},"ChainSage agent"),el("div",{class:"mono",style:{fontSize:"11.5px",color:"var(--text3)"}},"Powered by ChainSage Trust Layer · the verdict engine")])
+  var header=el("div",{class:"demo-header",style:{display:"flex",alignItems:"center",gap:"13px",paddingBottom:"18px",borderBottom:"1px solid var(--card-border)",marginBottom:"18px"}},[
+    el("span",{class:"demo-header-icon brandgrad iconbox",style:{width:"40px",height:"40px",borderRadius:"13px"}},IC.bot(21,"#fff")),
+    el("div",{class:"demo-header-txt"},[el("div",{style:{fontSize:"16px",fontWeight:800}},"ChainSage Agent"),el("div",{class:"mono",style:{fontSize:"11.5px",color:"var(--text3)"}},"Powered by ChainSage Trust Layer · the verdict engine")])
   ]);
-  var center=el("div",{style:{padding:"22px",display:"flex",flexDirection:"column",minHeight:"560px"}},[header,chipRow,chatArea,inputBar]);
+  var center=el("div",{class:"demo-center",style:{padding:"22px",display:"flex",flexDirection:"column",minHeight:"560px"}},[header,chipRow,chatArea,inputBar]);
 
   var frame=el("div",{class:"demo3",style:{display:"grid",gridTemplateColumns:"340px 1fr",minHeight:"600px",borderRadius:"20px",overflow:"hidden",background:"var(--bg2)"}},[left,center]);
-  var shell=reveal(el("div",{class:"glass",style:{borderRadius:"26px",padding:"10px"}},frame));
+  var shell=reveal(el("div",{class:"glass demo-shell",style:{borderRadius:"26px",padding:"10px"}},frame));
 
   return el("section",{id:"demo"},el("div",{class:"wrap"},[
     el("div",{style:{textAlign:"center",marginBottom:"8px"}},reveal(eyebrow("The product"))),
@@ -633,7 +647,7 @@ function buildCTA(){
 /* ============ FOOTER ============ */
 function buildFooter(){
   var prod=el("div",{},[el("div",{class:"mono",style:{fontSize:"12px",color:"var(--text3)",textTransform:"uppercase",marginBottom:"12px"}},"Product")].concat(["Guardian","Agent SDK","Policy Engine","Trust Network"].map(function(l){return el("a",{href:"#",style:{display:"block",fontSize:"14px",color:"var(--text2)",padding:"4px 0"}},l);})));
-  var comp=el("div",{},[el("div",{class:"mono",style:{fontSize:"12px",color:"var(--text3)",textTransform:"uppercase",marginBottom:"12px"}},"Company")].concat(["Documentation","GitHub","X","Waitlist"].map(function(l){return el("a",{href:l==="Waitlist"?"#cta":"#",style:{display:"block",fontSize:"14px",color:"var(--text2)",padding:"4px 0"}},l);})));
+  var comp=el("div",{},[el("div",{class:"mono",style:{fontSize:"12px",color:"var(--text3)",textTransform:"uppercase",marginBottom:"12px"}},"Company")].concat(["Documentation","GitHub","X","Waitlist"].map(function(l){var href=l==="Waitlist"?"#cta":(l==="X"?"https://x.com/chainsagetrust":"#");var attrs={href:href,style:{display:"block",fontSize:"14px",color:"var(--text2)",padding:"4px 0"}};if(l==="X"){attrs.target="_blank";attrs.rel="noopener noreferrer";}return el("a",attrs,l);})));
   var cols=el("div",{style:{display:"flex",justifyContent:"space-between",gap:"40px",flexWrap:"wrap"}},[
     el("div",{style:{maxWidth:"380px"}},[el("div",{style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"16px"}},[mark(32),el("span",{style:{fontWeight:800,fontSize:"19px"}},"ChainSage")]),el("div",{style:{color:"var(--text2)",fontSize:"14px",marginBottom:"14px"}},"Trust Layer for Autonomous Finance"),el("div",{class:"mono",style:{color:"var(--text3)",fontSize:"13px",lineHeight:1.6}},"Settlement moves money. Authorization grants permission. ChainSage decides whether it should happen.")]),
     el("div",{style:{display:"flex",gap:"60px"}},[prod,comp])]);
