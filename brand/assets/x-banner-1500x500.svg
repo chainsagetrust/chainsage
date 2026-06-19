@@ -1,0 +1,30 @@
+<svg width="1500" height="500" viewBox="0 0 1500 500" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ChainSage X banner">
+  <defs>
+    <linearGradient id="bgb" x1="0" y1="0" x2="1500" y2="500" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0E0A1E"/><stop offset="1" stop-color="#0A0816"/>
+    </linearGradient>
+    <radialGradient id="o1" cx="0.25" cy="0.4" r="0.4"><stop offset="0" stop-color="#7C5CFF" stop-opacity="0.5"/><stop offset="1" stop-color="#7C5CFF" stop-opacity="0"/></radialGradient>
+    <radialGradient id="o2" cx="0.82" cy="0.7" r="0.45"><stop offset="0" stop-color="#5B8DEF" stop-opacity="0.4"/><stop offset="1" stop-color="#5B8DEF" stop-opacity="0"/></radialGradient>
+    <linearGradient id="mb" x1="60" y1="380" x2="320" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7C5CFF"/><stop offset="0.55" stop-color="#9C82FF"/><stop offset="1" stop-color="#5B8DEF"/>
+    </linearGradient>
+    <linearGradient id="cb" x1="150" y1="200" x2="270" y2="300" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#B9A5FF"/><stop offset="1" stop-color="#7C5CFF"/></linearGradient>
+    <linearGradient id="wb" x1="380" y1="0" x2="1100" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F4F4F7"/><stop offset="1" stop-color="#B9A5FF"/></linearGradient>
+  </defs>
+  <rect width="1500" height="500" fill="url(#bgb)"/>
+  <rect width="1500" height="500" fill="url(#o1)"/>
+  <rect width="1500" height="500" fill="url(#o2)"/>
+  <g transform="translate(140,130) scale(2.0)">
+    <g stroke="url(#mb)" stroke-width="5.5" stroke-linecap="round" fill="none">
+      <path d="M28 92 Q44 76 56 64"/><path d="M64 56 Q80 44 92 28"/><path d="M92 92 Q74 74 64 64"/>
+    </g>
+    <circle cx="28" cy="92" r="9" fill="#0E0A1E" stroke="url(#mb)" stroke-width="4.5"/>
+    <circle cx="92" cy="28" r="9" fill="url(#mb)"/>
+    <circle cx="92" cy="92" r="7" fill="#0E0A1E" stroke="url(#mb)" stroke-width="4"/>
+    <rect x="46" y="46" width="28" height="28" rx="7" transform="rotate(45 60 60)" fill="url(#cb)"/>
+    <rect x="52.5" y="52.5" width="15" height="15" rx="3.5" transform="rotate(45 60 60)" fill="#0B0B12" opacity="0.5"/>
+  </g>
+  <text x="380" y="240" font-family="'Hanken Grotesk', sans-serif" font-size="78" font-weight="800" letter-spacing="-2.5" fill="url(#wb)">ChainSage</text>
+  <text x="384" y="300" font-family="'JetBrains Mono', monospace" font-size="26" letter-spacing="6" fill="#A6A6B5">TRUST LAYER · AUTONOMOUS FINANCE</text>
+  <text x="384" y="356" font-family="'Hanken Grotesk', sans-serif" font-size="24" fill="#6E6E80">ChainSage decides whether it should happen.</text>
+</svg>

@@ -1,0 +1,87 @@
+@import "./tokens.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-display);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  /* Ambient brand glow — purely decorative, never the sacred verdict colors. */
+  background-image:
+    radial-gradient(60rem 40rem at 80% -10%, rgba(124, 92, 255, 0.16), transparent 60%),
+    radial-gradient(50rem 36rem at 0% 110%, rgba(91, 141, 239, 0.14), transparent 60%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+.micro {
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-micro);
+  text-transform: uppercase;
+}
+
+@keyframes cs-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cs-fade-up {
+  animation: cs-fade-up 0.5s var(--ease) both;
+}
+
+button {
+  font-family: var(--font-display);
+}
+
+a {
+  color: inherit;
+}
+
+/* Range slider — tinted with the decorative primary, never a verdict color. */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--hairline);
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--primary);
+  cursor: pointer;
+  box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.18);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 999px;
+  background: var(--primary);
+  cursor: pointer;
+}
+
+::selection {
+  background: rgba(124, 92, 255, 0.35);
+}

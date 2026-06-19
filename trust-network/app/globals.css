@@ -1,0 +1,104 @@
+@import "./tokens.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-display);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background-image:
+    radial-gradient(60rem 40rem at 80% -10%, rgba(124, 92, 255, 0.16), transparent 60%),
+    radial-gradient(50rem 36rem at 0% 110%, rgba(91, 141, 239, 0.14), transparent 60%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+.micro {
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-micro);
+  text-transform: uppercase;
+}
+
+@keyframes cs-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.cs-fade-up {
+  animation: cs-fade-up 0.5s var(--ease) both;
+}
+
+/* Incident ripple — a decorative expanding ring from the drainer node. The
+   ring uses the danger color because it represents an active risk event. */
+@keyframes cs-ripple {
+  0% {
+    r: 10;
+    opacity: 0.55;
+  }
+  100% {
+    r: 220;
+    opacity: 0;
+  }
+}
+.cs-ripple {
+  animation: cs-ripple 1.6s var(--ease) forwards;
+}
+
+@keyframes cs-feed-in {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.cs-feed-in {
+  animation: cs-feed-in 0.35s var(--ease) both;
+}
+
+.node {
+  transition: opacity 0.4s var(--ease);
+}
+.node circle {
+  transition:
+    fill 0.7s var(--ease),
+    stroke 0.7s var(--ease),
+    r 0.7s var(--ease);
+}
+.edge {
+  transition: stroke 0.7s var(--ease), stroke-opacity 0.7s var(--ease);
+}
+
+button {
+  font-family: var(--font-display);
+}
+a {
+  color: inherit;
+}
+::selection {
+  background: rgba(124, 92, 255, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cs-ripple {
+    display: none;
+  }
+}

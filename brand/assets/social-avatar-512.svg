@@ -1,0 +1,28 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ChainSage avatar">
+  <defs>
+    <linearGradient id="ag" x1="90" y1="60" x2="440" y2="470" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#150F2E"/><stop offset="1" stop-color="#0A0816"/>
+    </linearGradient>
+    <radialGradient id="ah" cx="0.5" cy="0.4" r="0.6">
+      <stop offset="0" stop-color="#7C5CFF" stop-opacity="0.4"/><stop offset="1" stop-color="#7C5CFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="am" x1="120" y1="420" x2="420" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7C5CFF"/><stop offset="0.55" stop-color="#9C82FF"/><stop offset="1" stop-color="#5B8DEF"/>
+    </linearGradient>
+    <linearGradient id="acc" x1="190" y1="190" x2="322" y2="322" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#B9A5FF"/><stop offset="1" stop-color="#7C5CFF"/>
+    </linearGradient>
+  </defs>
+  <circle cx="256" cy="256" r="256" fill="url(#ag)"/>
+  <circle cx="256" cy="256" r="256" fill="url(#ah)"/>
+  <g transform="translate(76,76) scale(3.0)">
+    <g stroke="url(#am)" stroke-width="5.5" stroke-linecap="round" fill="none">
+      <path d="M28 92 Q44 76 56 64"/><path d="M64 56 Q80 44 92 28"/><path d="M92 92 Q74 74 64 64"/>
+    </g>
+    <circle cx="28" cy="92" r="9" fill="#0E0A1E" stroke="url(#am)" stroke-width="4.5"/>
+    <circle cx="92" cy="28" r="9" fill="url(#am)"/>
+    <circle cx="92" cy="92" r="7" fill="#0E0A1E" stroke="url(#am)" stroke-width="4"/>
+    <rect x="46" y="46" width="28" height="28" rx="7" transform="rotate(45 60 60)" fill="url(#acc)"/>
+    <rect x="52.5" y="52.5" width="15" height="15" rx="3.5" transform="rotate(45 60 60)" fill="#0B0B12" opacity="0.5"/>
+  </g>
+</svg>

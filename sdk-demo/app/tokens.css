@@ -1,0 +1,111 @@
+/* ============================================================================
+   ChainSage — Design Tokens (single source of truth)
+   Trust Layer for Autonomous Finance
+   ----------------------------------------------------------------------------
+   Sacred semantic rule: --trust / --warning / --danger are reserved EXCLUSIVELY
+   for verdict / risk state (ALLOW / REVIEW / DENY). Never use them decoratively.
+   ========================================================================== */
+
+:root {
+  /* --- Brand palette (theme-independent) --- */
+  --primary: #7C5CFF;
+  --secondary: #9C82FF;
+  --accent: #5B8DEF;     /* the "flow" blue */
+  --p3: #B9A5FF;
+
+  /* --- Semantic / verdict (SACRED — verdict & risk state only) --- */
+  --trust: #34D399;      /* ALLOW / safe   */
+  --warning: #FBBF24;    /* REVIEW         */
+  --danger: #F4534F;     /* DENY / risk    */
+  --cyan: #22D3EE;       /* data / signal accent */
+
+  /* --- Brand gradient --- */
+  --brand-gradient: linear-gradient(135deg, #7C5CFF, #9C82FF 55%, #5B8DEF);
+
+  /* --- Typography --- */
+  --font-display: "Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* type scale */
+  --fs-display: clamp(2.6rem, 5vw, 4.25rem); /* 48–68 */
+  --fs-h1: 2.125rem;   /* 34 */
+  --fs-h2: 1.625rem;   /* 26 */
+  --fs-h3: 1.25rem;    /* 20 */
+  --fs-body: 1rem;     /* 16 */
+  --fs-small: 0.875rem;/* 14 */
+  --fs-caption: 0.8125rem; /* 13 */
+  --fs-micro: 0.6875rem;   /* 11 — uppercase, +0.04em */
+
+  --tracking-display: -0.03em;
+  --tracking-tight: -0.02em;
+  --tracking-micro: 0.04em;
+
+  /* radii / motion */
+  --radius-sm: 8px;
+  --radius: 14px;
+  --radius-lg: 22px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ============================== MIDNIGHT (default) ====================== */
+:root,
+[data-theme="midnight"] {
+  --bg: #0A0816;
+  --bg-2: #0E0A1E;
+  --text: #F4F4F7;
+  --text-2: #A6A6B5;
+  --text-3: #6E6E80;
+
+  --card: rgba(22, 20, 40, 0.55);
+  --card-border: rgba(255, 255, 255, 0.10);
+  --hairline: rgba(255, 255, 255, 0.08);
+
+  --node-fill: #0E0A1E;       /* hollow node interior on dark bg */
+  --glass-blur: blur(28px) saturate(1.4);
+  --glass-shadow: 0 16px 50px rgba(0, 0, 0, 0.55);
+  --glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+  color-scheme: dark;
+}
+
+/* ============================== AURORA LIGHT =========================== */
+[data-theme="aurora"] {
+  --bg: #F4F2FB;
+  --bg-2: #ECEAF8;
+  --text: #15131F;
+  --text-2: #54506A;
+  --text-3: #8B86A0;
+
+  --card: rgba(255, 255, 255, 0.62);
+  --card-border: rgba(124, 92, 255, 0.14);
+  --hairline: rgba(124, 92, 255, 0.10);
+
+  --node-fill: #F4F2FB;
+  --glass-blur: blur(26px) saturate(1.5);
+  --glass-shadow: 0 16px 44px rgba(80, 60, 160, 0.16);
+  --glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+
+  color-scheme: light;
+}
+
+/* --- Reusable glass surface --- */
+.cs-glass {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow), var(--glass-inset);
+  border-radius: var(--radius-lg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

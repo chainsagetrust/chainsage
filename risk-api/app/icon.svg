@@ -1,0 +1,18 @@
+<svg width="64" height="64" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ChainSage">
+  <defs>
+    <linearGradient id="fg" x1="20" y1="100" x2="100" y2="20" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7C5CFF"/><stop offset="0.55" stop-color="#9C82FF"/><stop offset="1" stop-color="#5B8DEF"/>
+    </linearGradient>
+    <linearGradient id="fc" x1="46" y1="46" x2="74" y2="74" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#B9A5FF"/><stop offset="1" stop-color="#7C5CFF"/>
+    </linearGradient>
+  </defs>
+  <!-- simplified: core + intent node + execution node, third branch dropped for <=32px legibility -->
+  <g stroke="url(#fg)" stroke-width="7" stroke-linecap="round" fill="none">
+    <path d="M28 92 Q44 76 56 64"/><path d="M64 56 Q80 44 92 28"/>
+  </g>
+  <circle cx="28" cy="92" r="10" fill="#0E0A1E" stroke="url(#fg)" stroke-width="5.5"/>
+  <circle cx="92" cy="28" r="10" fill="url(#fg)"/>
+  <rect x="44" y="44" width="32" height="32" rx="8" transform="rotate(45 60 60)" fill="url(#fc)"/>
+  <rect x="51.5" y="51.5" width="17" height="17" rx="4" transform="rotate(45 60 60)" fill="#0B0B12" opacity="0.5"/>
+</svg>

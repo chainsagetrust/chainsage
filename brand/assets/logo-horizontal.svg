@@ -1,0 +1,27 @@
+<svg width="520" height="120" viewBox="0 0 520 120" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ChainSage — Trust Layer · Autonomous Finance">
+  <defs>
+    <linearGradient id="lg" x1="20" y1="100" x2="100" y2="20" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7C5CFF"/><stop offset="0.55" stop-color="#9C82FF"/><stop offset="1" stop-color="#5B8DEF"/>
+    </linearGradient>
+    <linearGradient id="lc" x1="46" y1="46" x2="74" y2="74" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#B9A5FF"/><stop offset="1" stop-color="#7C5CFF"/>
+    </linearGradient>
+    <linearGradient id="lw" x1="150" y1="40" x2="430" y2="40" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F4F4F7"/><stop offset="1" stop-color="#B9A5FF"/>
+    </linearGradient>
+  </defs>
+  <!-- mark -->
+  <g transform="translate(0,0)">
+    <g stroke="url(#lg)" stroke-width="5.5" stroke-linecap="round" fill="none">
+      <path d="M28 92 Q44 76 56 64"/><path d="M64 56 Q80 44 92 28"/><path d="M92 92 Q74 74 64 64"/>
+    </g>
+    <circle cx="28" cy="92" r="9" fill="#0E0A1E" stroke="url(#lg)" stroke-width="4.5"/>
+    <circle cx="92" cy="28" r="9" fill="url(#lg)"/>
+    <circle cx="92" cy="92" r="7" fill="#0E0A1E" stroke="url(#lg)" stroke-width="4"/>
+    <rect x="46" y="46" width="28" height="28" rx="7" transform="rotate(45 60 60)" fill="url(#lc)"/>
+    <rect x="52.5" y="52.5" width="15" height="15" rx="3.5" transform="rotate(45 60 60)" fill="#0B0B12" opacity="0.5"/>
+  </g>
+  <!-- wordmark -->
+  <text x="134" y="58" font-family="'Hanken Grotesk', sans-serif" font-size="40" font-weight="800" letter-spacing="-1.2" fill="url(#lw)">ChainSage</text>
+  <text x="135" y="82" font-family="'JetBrains Mono', monospace" font-size="12.5" letter-spacing="3" fill="#A6A6B5">TRUST LAYER · AUTONOMOUS FINANCE</text>
+</svg>

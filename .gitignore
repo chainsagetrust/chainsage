@@ -1,0 +1,29 @@
+# dependencies
+**/node_modules/
+
+# next.js
+**/.next/
+**/out/
+
+# production
+**/build/
+**/dist/
+
+# env (examples like .env.local.example are intentionally NOT ignored)
+**/.env
+**/.env.local
+**/.env*.local
+
+# runtime data stores (e.g. trust-network signal ledger)
+**/.data/
+
+# local tooling config (Claude Code, etc.)
+.claude/
+
+# misc
+**/.DS_Store
+**/*.log
+**/coverage/
+**/.vercel/
+**/*.tsbuildinfo
+**/next-env.d.ts

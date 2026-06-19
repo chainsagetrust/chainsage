@@ -1,0 +1,26 @@
+<svg width="1000" height="380" viewBox="0 0 1000 380" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Five-phase roadmap: Guardian to Trust Network — wedge to standard">
+  <defs>
+    <linearGradient id="rise" x1="60" y1="320" x2="940" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#34D399"/><stop offset="0.3" stop-color="#22D3EE"/><stop offset="0.6" stop-color="#5B8DEF"/><stop offset="0.85" stop-color="#7C5CFF"/><stop offset="1" stop-color="#9C82FF"/>
+    </linearGradient>
+    <linearGradient id="fillrise" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7C5CFF" stop-opacity="0.22"/><stop offset="1" stop-color="#7C5CFF" stop-opacity="0"/></linearGradient>
+  </defs>
+  <!-- rising wedge curve -->
+  <path d="M60 320 Q 380 300 540 200 T 940 60 L940 340 L60 340 Z" fill="url(#fillrise)"/>
+  <path d="M60 320 Q 380 300 540 200 T 940 60" fill="none" stroke="url(#rise)" stroke-width="4" stroke-linecap="round"/>
+  <!-- phase markers -->
+  <g font-family="'JetBrains Mono', monospace" font-size="11">
+    <!-- p1 -->
+    <circle cx="120" cy="312" r="9" fill="#34D399"/><text x="120" y="348" text-anchor="middle" fill="#A6A6B5">01 Guardian</text>
+    <!-- p2 -->
+    <circle cx="320" cy="280" r="9" fill="#22D3EE"/><text x="320" y="348" text-anchor="middle" fill="#A6A6B5">02 Risk API</text>
+    <!-- p3 -->
+    <circle cx="520" cy="208" r="9" fill="#5B8DEF"/><text x="520" y="348" text-anchor="middle" fill="#A6A6B5">03 Agent SDK</text>
+    <!-- p4 -->
+    <circle cx="720" cy="128" r="9" fill="#7C5CFF"/><text x="720" y="348" text-anchor="middle" fill="#A6A6B5">04 Policy Engine</text>
+    <!-- p5 -->
+    <circle cx="910" cy="64" r="11" fill="#9C82FF" stroke="#B9A5FF" stroke-width="3"/><text x="900" y="348" text-anchor="middle" fill="#B9A5FF">05 Trust Network</text>
+  </g>
+  <text x="60" y="36" font-family="'Hanken Grotesk', sans-serif" font-size="18" font-weight="700" fill="#F4F4F7">From wedge to standard</text>
+  <text x="60" y="58" font-family="'JetBrains Mono', monospace" font-size="11" fill="#6E6E80">consumer trust → embeddable infrastructure → the network-effect moat</text>
+</svg>

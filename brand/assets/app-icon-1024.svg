@@ -1,0 +1,32 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ChainSage app icon">
+  <defs>
+    <linearGradient id="bg" x1="160" y1="120" x2="880" y2="940" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#150F2E"/><stop offset="0.5" stop-color="#0E0A1E"/><stop offset="1" stop-color="#0A0816"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0.5" cy="0.42" r="0.55">
+      <stop offset="0" stop-color="#7C5CFF" stop-opacity="0.45"/><stop offset="1" stop-color="#7C5CFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ig" x1="180" y1="860" x2="860" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7C5CFF"/><stop offset="0.55" stop-color="#9C82FF"/><stop offset="1" stop-color="#5B8DEF"/>
+    </linearGradient>
+    <linearGradient id="ic" x1="400" y1="400" x2="624" y2="624" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#B9A5FF"/><stop offset="1" stop-color="#7C5CFF"/>
+    </linearGradient>
+  </defs>
+  <!-- squircle, radius ~228 -->
+  <rect x="0" y="0" width="1024" height="1024" rx="228" fill="url(#bg)"/>
+  <rect x="0" y="0" width="1024" height="1024" rx="228" fill="url(#halo)"/>
+  <!-- 1px inner hairline -->
+  <rect x="6" y="6" width="1012" height="1012" rx="222" fill="none" stroke="#ffffff" stroke-opacity="0.10" stroke-width="2"/>
+  <!-- mark scaled from 120-grid (x ~6.6) and centered -->
+  <g transform="translate(176,176) scale(5.6)">
+    <g stroke="url(#ig)" stroke-width="5.5" stroke-linecap="round" fill="none">
+      <path d="M28 92 Q44 76 56 64"/><path d="M64 56 Q80 44 92 28"/><path d="M92 92 Q74 74 64 64"/>
+    </g>
+    <circle cx="28" cy="92" r="9" fill="#0E0A1E" stroke="url(#ig)" stroke-width="4.5"/>
+    <circle cx="92" cy="28" r="9" fill="url(#ig)"/>
+    <circle cx="92" cy="92" r="7" fill="#0E0A1E" stroke="url(#ig)" stroke-width="4"/>
+    <rect x="46" y="46" width="28" height="28" rx="7" transform="rotate(45 60 60)" fill="url(#ic)"/>
+    <rect x="52.5" y="52.5" width="15" height="15" rx="3.5" transform="rotate(45 60 60)" fill="#0B0B12" opacity="0.5"/>
+  </g>
+</svg>

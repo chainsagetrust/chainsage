@@ -1,0 +1,84 @@
+@import "./tokens.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-display);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  /* Ambient brand glow — purely decorative, never the sacred verdict colors. */
+  background-image:
+    radial-gradient(60rem 40rem at 80% -10%, rgba(124, 92, 255, 0.16), transparent 60%),
+    radial-gradient(50rem 36rem at 0% 110%, rgba(91, 141, 239, 0.14), transparent 60%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+.micro {
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-micro);
+  text-transform: uppercase;
+}
+
+/* count-up / ring animations respect reduced motion via the media query in tokens.css */
+@keyframes cs-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cs-fade-up {
+  animation: cs-fade-up 0.5s var(--ease) both;
+}
+
+@keyframes cs-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.cs-pulse {
+  animation: cs-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes cs-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.cs-spin {
+  animation: cs-spin 1s linear infinite;
+}
+
+button {
+  font-family: var(--font-display);
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  background: rgba(124, 92, 255, 0.35);
+}

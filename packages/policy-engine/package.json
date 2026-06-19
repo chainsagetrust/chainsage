@@ -1,0 +1,25 @@
+{
+  "name": "@chainsage/policy-engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ChainSage Policy Engine — pure, deterministic owner-policy evaluation. Given an Intent, a Policy and context facts, returns ALLOW / REVIEW / DENY with every rule that fired. Precedence is absolute: DENY > REVIEW > ALLOW.",
+  "type": "module",
+  "main": "index.ts",
+  "types": "index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./policy": "./policy.ts",
+    "./evaluate": "./evaluate.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "chainsage": "file:../chainsage-sdk",
+    "@types/node": "^20.19.43",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}

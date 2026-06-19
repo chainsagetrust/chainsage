@@ -1,0 +1,26 @@
+{
+  "name": "@chainsage/trust-network",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ChainSage Trust Network — pure, deterministic reputation engine. Computes a propagated trust score per entity from its own history plus bounded, decaying trust from connected entities. Incidents collapse and propagate with distance decay.",
+  "type": "module",
+  "main": "index.ts",
+  "types": "index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./model": "./model.ts",
+    "./compute": "./compute.ts",
+    "./ingest": "./ingest.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "chainsage": "file:../chainsage-sdk",
+    "@types/node": "^20.19.43",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
