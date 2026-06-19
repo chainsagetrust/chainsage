@@ -1,0 +1,14 @@
+{
+  "name": "chainsage-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "ChainSage monorepo root. Declares the npm workspace so the shared @chainsage/* packages (engine, policy-engine, trust-network) and the unified `site` app install from one root — hoisting shared deps like viem so the engine's TypeScript resolves them at build time.",
+  "workspaces": [
+    "site",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace site",
+    "test": "npm run test --workspace @chainsage/engine && npm run test --workspace @chainsage/policy-engine && npm run test --workspace @chainsage/trust-network"
+  }
+}
