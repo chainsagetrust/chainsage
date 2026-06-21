@@ -9,3 +9,5 @@ export * from "./risk";
 export * from "./chain";
 export * from "./classify";
 export * from "./simulate";
+export * from "./decide";
+export * from "./guard";

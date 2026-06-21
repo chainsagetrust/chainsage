@@ -42,9 +42,15 @@ export const simulateSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
+// /guard accepts the same intent shape as /simulate (approve | transfer). The
+// difference is the response: /guard runs the Guardian signal-combiner (decide)
+// and returns { verdict, reasons, simulated, verdictId }.
+export const guardSchema = simulateSchema;
+
 export type ScoreInput = z.infer<typeof scoreSchema>;
 export type ClassifyInput = z.infer<typeof classifySchema>;
 export type SimulateInput = z.infer<typeof simulateSchema>;
+export type GuardInput = z.infer<typeof guardSchema>;
 
 /** Parse `body` with `schema`, or throw HttpError(400) with a precise message. */
 export function parseOr400<S extends z.ZodTypeAny>(schema: S, body: unknown): z.infer<S> {

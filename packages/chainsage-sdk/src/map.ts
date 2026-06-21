@@ -1,15 +1,23 @@
 /**
  * Pure mapping: on-chain facts (Classifications) → intent-safety parts → Verdict.
  *
- * The core risk decisions are the SHARED engine's pure evaluators
- * (evaluateApprove / evaluateTransfer) — no copy here. `swapParts` is the only
- * SDK-original decision (swaps have no engine evaluator) and is deliberately
- * conservative + honest about what it does not check.
+ * SINGLE SOURCE OF TRUTH: the verdict itself comes from the shared engine's pure
+ * combiner `decide()`. Each intent kind builds engine `Signal[]` (via the shared
+ * producers approveSignals / transferSignals / swapSignals) and hands them to
+ * decide() — the SAME combiner the Risk API `/guard` endpoint calls. There is no
+ * second copy of the verdict logic here.
+ *
+ * The SDK runs no transaction-effect simulation (no honeypot / hidden-transfer /
+ * intent-mismatch reads), so it always reports `simulated: false` and lists those
+ * effect checks in `notChecked`. It never fabricates a clean simulation.
  */
 import {
-  evaluateApprove,
-  evaluateTransfer,
+  approveSignals,
+  decide,
+  swapSignals,
+  transferSignals,
   type Classification,
+  type Signal,
 } from "@chainsage/engine";
 import type { Decision, Intent, Verdict } from "./types";
 
@@ -17,15 +25,11 @@ export interface EvalParts {
   decision: Decision;
   reasons: string[];
   notChecked: string[];
+  /** Whether transaction-effect simulation actually ran (always false in the SDK today). */
+  simulated: boolean;
   /** Spender/destination is on the known-good allowlist (lifts the ALLOW score to 100). */
   knownGood?: boolean;
   experimental?: boolean;
-}
-
-const RANK: Record<Decision, number> = { ALLOW: 0, REVIEW: 1, DENY: 2 };
-
-export function worstDecision(a: Decision, b: Decision): Decision {
-  return RANK[a] >= RANK[b] ? a : b;
 }
 
 /**
@@ -54,10 +58,12 @@ export function makeVerdictId(): string {
 const APPROVE_NOT_CHECKED = [
   "Token-contract honesty (fee-on-transfer, blocklists, upgradeable logic) is not checked.",
   "Your current balance and any existing allowance are not read — the intent carries no owner-side reads.",
+  "Transaction-effect simulation (honeypot / hidden-transfer / intent-mismatch) is not run by the SDK.",
 ];
 const TRANSFER_NOT_CHECKED = [
   "Sender balance is not checked.",
   "Whether a contract destination can receive/return the token is not simulated.",
+  "Transaction-effect simulation (honeypot / hidden-transfer / intent-mismatch) is not run by the SDK.",
 ];
 const SWAP_NOT_CHECKED = [
   "The swap route, price, slippage and output amount are NOT simulated — only the two token contracts are classified on-chain.",
@@ -68,12 +74,19 @@ const X402_NOT_CHECKED = [
   "Sender balance is not checked.",
 ];
 
+/** Combine engine signals through the shared decide() combiner (SDK never simulates effects). */
+function combine(signals: Signal[], notChecked: string[]): { decision: Decision; reasons: string[] } {
+  const r = decide({ signals, simulated: false, notChecked });
+  return { decision: r.verdict, reasons: r.reasons };
+}
+
 export function approveParts(spender: Classification, isUnlimited: boolean): EvalParts {
-  const { verdict, reasons } = evaluateApprove(spender, isUnlimited);
+  const { decision, reasons } = combine(approveSignals(spender, isUnlimited), APPROVE_NOT_CHECKED);
   return {
-    decision: verdict,
+    decision,
     reasons: [...reasons, ...spender.signals],
     notChecked: APPROVE_NOT_CHECKED,
+    simulated: false,
     knownGood: !!spender.knownGood,
   };
 }
@@ -83,41 +96,44 @@ export function transferParts(
   toIsZero: boolean,
   toIsTokenContract: boolean
 ): EvalParts {
-  const { verdict, reasons } = evaluateTransfer({ toIsZero, toIsTokenContract, destination });
+  const { decision, reasons } = combine(
+    transferSignals({ toIsZero, toIsTokenContract, destination }),
+    TRANSFER_NOT_CHECKED
+  );
   return {
-    decision: verdict,
+    decision,
     reasons: [...reasons, ...destination.signals],
     notChecked: TRANSFER_NOT_CHECKED,
+    simulated: false,
     knownGood: !!destination.knownGood,
   };
 }
 
 export function swapParts(tokenIn: Classification, tokenOut: Classification): EvalParts {
-  const decision = worstDecision(tokenIn.verdict, tokenOut.verdict);
-  const reasons: string[] = [];
-  if (decision === "ALLOW") {
-    reasons.push("Both tokens are established on-chain contracts; no fresh-deploy signal.");
-  } else {
-    reasons.push(
-      "At least one side of the swap is an unfamiliar or freshly-deployed token contract — verify before routing."
-    );
-  }
-  reasons.push(`tokenIn: ${tokenIn.signals[tokenIn.signals.length - 1] ?? "classified"}`);
-  reasons.push(`tokenOut: ${tokenOut.signals[tokenOut.signals.length - 1] ?? "classified"}`);
-  return { decision, reasons, notChecked: SWAP_NOT_CHECKED };
+  const { decision, reasons } = combine(swapSignals(tokenIn, tokenOut), SWAP_NOT_CHECKED);
+  return {
+    decision,
+    reasons: [
+      ...reasons,
+      `tokenIn: ${tokenIn.signals[tokenIn.signals.length - 1] ?? "classified"}`,
+      `tokenOut: ${tokenOut.signals[tokenOut.signals.length - 1] ?? "classified"}`,
+    ],
+    notChecked: SWAP_NOT_CHECKED,
+    simulated: false,
+  };
 }
 
 export function x402Parts(destination: Classification, toIsZero: boolean): EvalParts {
   // x402 is treated as a value transfer to `to` (no token contract context).
-  const { verdict, reasons } = evaluateTransfer({
-    toIsZero,
-    toIsTokenContract: false,
-    destination,
-  });
+  const { decision, reasons } = combine(
+    transferSignals({ toIsZero, toIsTokenContract: false, destination }),
+    X402_NOT_CHECKED
+  );
   return {
-    decision: verdict,
+    decision,
     reasons: ["x402 micropayment (forward-looking).", ...reasons, ...destination.signals],
     notChecked: X402_NOT_CHECKED,
+    simulated: false,
     knownGood: !!destination.knownGood,
     experimental: true,
   };
@@ -131,6 +147,7 @@ export function buildVerdict(intent: Intent, parts: EvalParts, source: "api" | "
     verdictId: makeVerdictId(),
     intent,
     notChecked: parts.notChecked,
+    simulated: parts.simulated,
     experimental: parts.experimental ?? false,
     source,
     at: new Date().toISOString(),
@@ -154,6 +171,7 @@ export function buildFailSafe(
     verdictId: makeVerdictId(),
     intent,
     notChecked: ["Everything — the verdict could not be computed; this is a fail-safe decision."],
+    simulated: false,
     experimental: intent.kind === "x402_pay",
     source,
     at: new Date().toISOString(),
