@@ -14,7 +14,8 @@
     "./classify": "./classify.ts",
     "./simulate": "./simulate.ts",
     "./decide": "./decide.ts",
-    "./guard": "./guard.ts"
+    "./guard": "./guard.ts",
+    "./sim": "./sim/index.ts"
   },
   "scripts": {
     "test": "vitest run"

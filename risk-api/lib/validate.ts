@@ -33,18 +33,24 @@ export const simulateSchema = z.discriminatedUnion("type", [
     token: addressSchema,
     spender: addressSchema,
     amount: amountSchema,
+    // OPTIONAL owner/signer. Classify-based checks don't need it; the /guard
+    // transaction-EFFECT simulation only runs when it is present.
+    from: addressSchema.optional(),
   }),
   z.object({
     type: z.literal("transfer"),
     token: addressSchema,
     to: addressSchema,
     amount: amountSchema,
+    from: addressSchema.optional(),
   }),
 ]);
 
-// /guard accepts the same intent shape as /simulate (approve | transfer). The
-// difference is the response: /guard runs the Guardian signal-combiner (decide)
-// and returns { verdict, reasons, simulated, verdictId }.
+// /guard accepts the same intent shape as /simulate (approve | transfer), plus an
+// optional `from` (owner). The difference is the response: /guard runs the
+// Guardian signal-combiner (decide) over classify signals AND — when `from` is
+// supplied and a simulation provider is configured — live transaction-effect
+// simulation, returning { verdict, reasons, simulated, simProvider, verdictId }.
 export const guardSchema = simulateSchema;
 
 export type ScoreInput = z.infer<typeof scoreSchema>;

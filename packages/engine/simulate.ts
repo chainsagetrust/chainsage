@@ -22,12 +22,20 @@ export interface ApproveIntent {
   token: Address;
   spender: Address;
   amount: string;
+  /**
+   * The owner/signer the transaction is sent FROM. OPTIONAL: the classify-based
+   * checks don't need it, but the transaction-effect simulation layer (guard.ts)
+   * can only run when it is present. Without it, effects are reported not-simulated.
+   */
+  from?: Address;
 }
 export interface TransferIntent {
   type: "transfer";
   token: Address;
   to: Address;
   amount: string;
+  /** The owner/signer the transfer is sent FROM. Optional — see ApproveIntent.from. */
+  from?: Address;
 }
 export type SimIntent = ApproveIntent | TransferIntent;
 

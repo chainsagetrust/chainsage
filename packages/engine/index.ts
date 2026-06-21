@@ -11,3 +11,4 @@ export * from "./classify";
 export * from "./simulate";
 export * from "./decide";
 export * from "./guard";
+export * from "./sim";

@@ -14,10 +14,12 @@
 import {
   approveSignals,
   decide,
+  effectSignals,
   swapSignals,
   transferSignals,
   type Classification,
   type Signal,
+  type SimOutcome,
 } from "@chainsage/engine";
 import type { Decision, Intent, Verdict } from "./types";
 
@@ -25,11 +27,32 @@ export interface EvalParts {
   decision: Decision;
   reasons: string[];
   notChecked: string[];
-  /** Whether transaction-effect simulation actually ran (always false in the SDK today). */
+  /** Whether transaction-effect simulation actually ran and parsed asset changes. */
   simulated: boolean;
+  /** Which effect-simulation provider ran (or "none"). */
+  simProvider?: string;
   /** Spender/destination is on the known-good allowlist (lifts the ALLOW score to 100). */
   knownGood?: boolean;
   experimental?: boolean;
+}
+
+/** A reverting tx → REVIEW signal. FEEDS the combiner a real fact; same shape the
+ * Risk API uses. Does not change decide()'s logic. */
+function revertSignal(revertReason?: string): Signal {
+  return {
+    id: "sim-revert",
+    severity: "REVIEW",
+    title: "Transaction reverts in simulation",
+    detail: `Simulating this transaction shows it reverts${
+      revertReason ? ` (${revertReason})` : ""
+    } — it will not execute as intended. Verify balances/allowances and the target before signing.`,
+  };
+}
+
+/** Turn an engine SimOutcome into the effect Signal[] to merge into the combiner. */
+function effectSignalsFrom(outcome?: SimOutcome): Signal[] {
+  if (!outcome) return [];
+  return [...effectSignals(outcome.effects), ...(outcome.reverted ? [revertSignal(outcome.revertReason)] : [])];
 }
 
 /**
@@ -55,16 +78,24 @@ export function makeVerdictId(): string {
   return `vrd_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-const APPROVE_NOT_CHECKED = [
+// Base checks the classify-only path never covers. The effect-sim line is added
+// ONLY when effect simulation did NOT run (no opt-in / no provider). When it ran,
+// we append the engine's own honest notChecked (what the active provider missed).
+const APPROVE_BASE_NOT_CHECKED = [
   "Token-contract honesty (fee-on-transfer, blocklists, upgradeable logic) is not checked.",
   "Your current balance and any existing allowance are not read — the intent carries no owner-side reads.",
-  "Transaction-effect simulation (honeypot / hidden-transfer / intent-mismatch) is not run by the SDK.",
 ];
-const TRANSFER_NOT_CHECKED = [
+const TRANSFER_BASE_NOT_CHECKED = [
   "Sender balance is not checked.",
   "Whether a contract destination can receive/return the token is not simulated.",
-  "Transaction-effect simulation (honeypot / hidden-transfer / intent-mismatch) is not run by the SDK.",
 ];
+const SDK_NO_EFFECT_SIM =
+  "Transaction-effect simulation (honeypot / hidden-transfer / intent-mismatch) is not run by the SDK.";
+
+/** notChecked for a part: when effects ran, use the engine's honest list; else the static one. */
+function notCheckedFor(base: string[], outcome?: SimOutcome): string[] {
+  return outcome ? [...base, ...outcome.notChecked] : [...base, SDK_NO_EFFECT_SIM];
+}
 const SWAP_NOT_CHECKED = [
   "The swap route, price, slippage and output amount are NOT simulated — only the two token contracts are classified on-chain.",
   "A swap intent carries no router/spender, so the route's approval risk is not assessed.",
@@ -80,13 +111,22 @@ function combine(signals: Signal[], notChecked: string[]): { decision: Decision;
   return { decision: r.verdict, reasons: r.reasons };
 }
 
-export function approveParts(spender: Classification, isUnlimited: boolean): EvalParts {
-  const { decision, reasons } = combine(approveSignals(spender, isUnlimited), APPROVE_NOT_CHECKED);
+export function approveParts(
+  spender: Classification,
+  isUnlimited: boolean,
+  effects?: SimOutcome
+): EvalParts {
+  const notChecked = notCheckedFor(APPROVE_BASE_NOT_CHECKED, effects);
+  const { decision, reasons } = combine(
+    [...effectSignalsFrom(effects), ...approveSignals(spender, isUnlimited)],
+    notChecked
+  );
   return {
     decision,
     reasons: [...reasons, ...spender.signals],
-    notChecked: APPROVE_NOT_CHECKED,
-    simulated: false,
+    notChecked,
+    simulated: effects?.simulated ?? false,
+    simProvider: effects?.provider ?? "none",
     knownGood: !!spender.knownGood,
   };
 }
@@ -94,17 +134,20 @@ export function approveParts(spender: Classification, isUnlimited: boolean): Eva
 export function transferParts(
   destination: Classification,
   toIsZero: boolean,
-  toIsTokenContract: boolean
+  toIsTokenContract: boolean,
+  effects?: SimOutcome
 ): EvalParts {
+  const notChecked = notCheckedFor(TRANSFER_BASE_NOT_CHECKED, effects);
   const { decision, reasons } = combine(
-    transferSignals({ toIsZero, toIsTokenContract, destination }),
-    TRANSFER_NOT_CHECKED
+    [...effectSignalsFrom(effects), ...transferSignals({ toIsZero, toIsTokenContract, destination })],
+    notChecked
   );
   return {
     decision,
     reasons: [...reasons, ...destination.signals],
-    notChecked: TRANSFER_NOT_CHECKED,
-    simulated: false,
+    notChecked,
+    simulated: effects?.simulated ?? false,
+    simProvider: effects?.provider ?? "none",
     knownGood: !!destination.knownGood,
   };
 }
@@ -148,6 +191,7 @@ export function buildVerdict(intent: Intent, parts: EvalParts, source: "api" | "
     intent,
     notChecked: parts.notChecked,
     simulated: parts.simulated,
+    simProvider: parts.simProvider ?? "none",
     experimental: parts.experimental ?? false,
     source,
     at: new Date().toISOString(),
@@ -172,6 +216,7 @@ export function buildFailSafe(
     intent,
     notChecked: ["Everything — the verdict could not be computed; this is a fail-safe decision."],
     simulated: false,
+    simProvider: "none",
     experimental: intent.kind === "x402_pay",
     source,
     at: new Date().toISOString(),
