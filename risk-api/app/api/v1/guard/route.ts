@@ -38,6 +38,10 @@ export const POST = withApi("guard", async ({ body }) => {
       verdict: result.verdict,
       reasons: result.reasons,
       simulated: result.simulated,
+      // Which effect-simulation provider ran (tenderly | rpc-trace | rpc-call | none),
+      // and whether the simulated tx reverts — surfaced honestly for the caller.
+      simProvider: result.simProvider,
+      reverted: result.reverted,
       verdictId: result.verdictId,
       signals: result.signals,
       notChecked: result.notChecked,

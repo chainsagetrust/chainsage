@@ -73,11 +73,17 @@ export interface Verdict {
   /** Things this verdict did NOT verify. No fabricated checks. */
   notChecked: string[];
   /**
-   * True only if transaction-effect simulation actually ran. The SDK does not
-   * simulate effects (honeypot / hidden-transfer / intent-mismatch), so this is
-   * always false today — those checks appear in `notChecked`. Never fabricated.
+   * True ONLY if transaction-effect simulation actually ran and parsed asset
+   * changes. Off by default: the SDK runs no effect simulation unless you opt in
+   * with `simulate: true` (local mode) AND a provider is configured. When false,
+   * the effect checks appear in `notChecked`. Never fabricated.
    */
   simulated: boolean;
+  /**
+   * Which effect-simulation provider ran: "tenderly" | "rpc-trace" | "rpc-call" |
+   * "none". "none" when effect simulation was off or no provider could run.
+   */
+  simProvider?: string;
   /** True for forward-looking intent kinds (e.g. x402_pay) that are not yet live. */
   experimental: boolean;
   /** Where the verdict was computed. */
@@ -100,6 +106,23 @@ export interface ChainSageConfig {
   apiKey?: string;
   /** Per-check timeout in ms. Default 8000. A timeout fails SAFE (never ALLOW). */
   timeoutMs?: number;
+  /**
+   * Opt in to LIVE transaction-effect simulation (honeypot* / hidden-transfer /
+   * over-approval / intent-mismatch / revert) in LOCAL mode. Default false — the
+   * SDK is classify-only unless you turn this on AND configure a provider
+   * (TENDERLY_* env, or a debug_traceCall-capable BASE_RPC_URL). When no provider
+   * can run, the result is honestly reported simulated:false (never fabricated).
+   * (*honeypot needs a buy→sell round-trip and is not derivable from a single
+   * approve/transfer intent — it stays in notChecked.)
+   */
+  simulate?: boolean;
+  /**
+   * ADVANCED / testing: inject a custom effect-simulation provider chain (engine
+   * `SimProviderImpl[]`), tried in order. When omitted, the env-configured chain
+   * (Tenderly → rpc-trace → rpc-call) is used. Only consulted when `simulate` is
+   * on. Typed loosely here to avoid leaking engine internals into your build.
+   */
+  simProviders?: unknown[];
   /**
    * Where to land when a verdict cannot be computed (network error, timeout,
    * read failure). NEVER "ALLOW". Default "REVIEW" (escalate to a human); set

@@ -10,7 +10,14 @@
  * non-ALLOW fail-safe verdict (REVIEW by default, DENY if configured). A trust
  * layer that fails open is worse than none.
  */
-import { UNLIMITED_THRESHOLD } from "@chainsage/engine";
+import {
+  MAX_UINT256,
+  UNLIMITED_THRESHOLD,
+  simulateEffects,
+  type SimAction,
+  type SimOutcome,
+  type SimProviderImpl,
+} from "@chainsage/engine";
 import type {
   Address,
   ChainSageConfig,
@@ -54,10 +61,15 @@ export class ChainSage {
   readonly mode: "api" | "local";
   private readonly onError: Extract<Decision, "REVIEW" | "DENY">;
   private readonly facts: Facts;
+  /** Live effect simulation is opt-in and LOCAL-mode only. */
+  private readonly simEnabled: boolean;
+  private readonly simProviders?: SimProviderImpl[];
 
   constructor(cfg: ChainSageConfig = {}) {
     this.mode = cfg.mode ?? "local";
     this.onError = cfg.onError ?? "REVIEW";
+    this.simEnabled = !!cfg.simulate && this.mode === "local";
+    this.simProviders = cfg.simProviders as SimProviderImpl[] | undefined;
     this.facts =
       this.mode === "api"
         ? new ApiFacts({
@@ -112,12 +124,23 @@ export class ChainSage {
   private async evaluate(intent: Intent): Promise<EvalParts> {
     switch (intent.kind) {
       case "approve": {
-        const spender = await this.facts.classify(intent.spender);
-        return approveParts(spender, amountIsUnlimited(intent.amount));
+        const [spender, effects] = await Promise.all([
+          this.facts.classify(intent.spender),
+          this.gatherEffects(intent),
+        ]);
+        return approveParts(spender, amountIsUnlimited(intent.amount), effects);
       }
       case "transfer": {
-        const dest = await this.facts.classify(intent.to);
-        return transferParts(dest, isZeroAddress(intent.to), sameAddress(intent.to, intent.token));
+        const [dest, effects] = await Promise.all([
+          this.facts.classify(intent.to),
+          this.gatherEffects(intent),
+        ]);
+        return transferParts(
+          dest,
+          isZeroAddress(intent.to),
+          sameAddress(intent.to, intent.token),
+          effects
+        );
       }
       case "swap": {
         const [tokenIn, tokenOut] = await Promise.all([
@@ -131,6 +154,37 @@ export class ChainSage {
         return x402Parts(dest, isZeroAddress(intent.to));
       }
     }
+  }
+
+  /**
+   * Simulate the proposed approve/transfer's effects (opt-in, local mode only).
+   * Returns undefined when disabled (classify-only path). NEVER throws and never
+   * fabricates: a missing provider / error resolves to a not-simulated outcome,
+   * which the combiner judges as caution, never ALLOW.
+   */
+  private async gatherEffects(intent: Intent): Promise<SimOutcome | undefined> {
+    if (!this.simEnabled) return undefined;
+    if (intent.kind !== "approve" && intent.kind !== "transfer") return undefined;
+
+    const action: SimAction =
+      intent.kind === "approve"
+        ? {
+            kind: "approve",
+            owner: intent.owner,
+            token: intent.token,
+            spender: intent.spender,
+            rawAmount: intent.amount === "unlimited" ? MAX_UINT256 : intent.amount,
+            unlimited: amountIsUnlimited(intent.amount),
+          }
+        : {
+            kind: "transfer",
+            owner: intent.owner,
+            token: intent.token,
+            to: intent.to,
+            rawAmount: intent.amount,
+          };
+
+    return simulateEffects(action, this.simProviders ? { providers: this.simProviders } : {});
   }
 
   private validate(intent: Intent): void {

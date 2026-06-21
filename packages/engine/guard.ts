@@ -3,26 +3,26 @@
  * call to the pure combiner decide(). This is the async, I/O half of the
  * Guardian verdict path; decide() (decide.ts) is the pure half.
  *
- * What is LIVE today (real Base reads, via classify.ts / chain.ts):
+ * What is LIVE today (real Base reads, via classify.ts / chain.ts / sim/):
  *   - approve  : spender contract identity, bounded age, known-good allowlist,
  *                unlimited-allowance detection → evaluateApprove calibration.
  *   - transfer : destination identity/age, zero-address, token-self-send → evaluateTransfer.
+ *   - effects  : transaction-EFFECT simulation (hidden-transfer / over-approval /
+ *                intent-mismatch / revert) via sim/ — when an `owner` (intent.from)
+ *                is supplied AND a provider (Tenderly or a trace-capable RPC) is
+ *                configured. See gatherEffects() below.
  *
- * What is STUBBED (honestly reported, never fabricated):
- *   - transaction-EFFECT simulation (honeypot / hidden-transfer / intent-mismatch)
- *     requires debug_traceCall or a fork and is NOT yet wired. We therefore set
- *     `simulated: false` and list those checks in `notChecked`. The decide()
- *     COMBINER already handles these effect signals the moment a real simulator
- *     supplies them — see effectSignals() — so this is a gathering gap, not a
- *     verdict-logic gap.
- *
- * The returned verdict is "capped" honestly: it reflects only the signals we
- * actually computed. We never claim a clean simulation we did not run.
+ * HONESTY: `simulated:true` ONLY when a real effect simulation ran and parsed
+ * asset changes. No owner / no provider / error / timeout → simulated:false and
+ * the unrun checks are listed in `notChecked`. We never fabricate a clean sim.
+ * Honeypot (sell-path) detection still cannot be derived from a single
+ * approve/transfer intent — it is honestly listed as not-checked.
  */
-import { getAddress, type Address } from "viem";
-import { getTokenMeta } from "./chain";
+import { getAddress, parseUnits } from "viem";
+import { MAX_UINT256, getTokenMeta } from "./chain";
 import { classifyAddress, type Classification } from "./classify";
 import { isUnlimitedAmount, type SimIntent } from "./simulate";
+import { simulateEffects, type SimAction, type SimProvider } from "./sim";
 import {
   approveSignals,
   decide,
@@ -35,31 +35,93 @@ import {
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
-/** What the effect-simulation layer was asked to verify but cannot yet run. */
-const EFFECT_NOT_CHECKED = [
-  "Transaction-effect simulation (honeypot / hidden-transfer / intent-mismatch) is NOT yet wired — it needs debug_traceCall or a fork. simulated=false reflects this; these effect signals were not evaluated.",
-];
-
 export interface GuardResult extends GuardianVerdict {
   /** Unique, stable id for this decision — for audit logs. */
   verdictId: string;
+  /** Which effect-simulation provider ran (or "none"). */
+  simProvider: SimProvider;
+  /** True if the simulated transaction reverts (only meaningful when a provider ran). */
+  reverted: boolean;
   /** Spender classification (approve only). */
   spenderClassification?: Classification;
   /** Destination classification (transfer only). */
   destinationClassification?: Classification;
 }
 
+/** Resolve an intent's human amount to raw units (unlimited → MAX_UINT256).
+ * Throws with an "amount …" message on a bad value so the API maps it to 400. */
+function resolveRawAmount(amount: string, decimals: number): { raw: bigint; unlimited: boolean } {
+  const a = amount.trim().toLowerCase();
+  if (a === "unlimited" || a === "max" || a === "infinite") {
+    return { raw: MAX_UINT256, unlimited: true };
+  }
+  let raw: bigint;
+  try {
+    raw = parseUnits(a, decimals);
+  } catch {
+    throw new Error(`amount "${amount}" is not a valid number or "unlimited"/"max".`);
+  }
+  return { raw, unlimited: raw >= MAX_UINT256 / 2n };
+}
+
 /**
- * STUBBED effect gatherer. A real implementation would debug_traceCall / fork
- * and populate EffectFacts. Until then it runs nothing and says so. It NEVER
- * returns fabricated "clean" effect facts.
+ * Gather transaction-effect facts by simulating the proposed intent against live
+ * Base state (sim/). Requires intent.from (the signer). Without it — or when no
+ * provider can run — returns simulated:false with an honest notChecked, which
+ * leaves the verdict to the other real signals (never an invented ALLOW).
  */
-async function gatherEffects(_intent: SimIntent): Promise<{
+async function gatherEffects(intent: SimIntent): Promise<{
   effects: EffectFacts;
   simulated: boolean;
+  provider: SimProvider;
+  reverted: boolean;
+  revertReason?: string;
   notChecked: string[];
 }> {
-  return { effects: {}, simulated: false, notChecked: EFFECT_NOT_CHECKED };
+  if (!intent.from) {
+    return {
+      effects: {},
+      simulated: false,
+      provider: "none",
+      reverted: false,
+      notChecked: [
+        "Transaction-effect simulation did NOT run: the intent carries no `from` (owner) address, so the tx cannot be simulated. Provide `from` to enable honeypot/hidden-transfer/intent-mismatch checks.",
+      ],
+    };
+  }
+
+  const token = getAddress(intent.token);
+  const owner = getAddress(intent.from);
+  const meta = await getTokenMeta(token);
+  const { raw, unlimited } = resolveRawAmount(intent.amount, meta.decimals);
+
+  const action: SimAction =
+    intent.type === "approve"
+      ? { kind: "approve", owner, token, spender: getAddress(intent.spender), rawAmount: raw, unlimited }
+      : { kind: "transfer", owner, token, to: getAddress(intent.to), rawAmount: raw };
+
+  const outcome = await simulateEffects(action);
+  return {
+    effects: outcome.effects,
+    simulated: outcome.simulated,
+    provider: outcome.provider,
+    reverted: outcome.reverted,
+    revertReason: outcome.revertReason,
+    notChecked: outcome.notChecked,
+  };
+}
+
+/** A reverting tx is surfaced as a REVIEW signal (it won't execute as intended).
+ * This FEEDS decide() a real fact; it does not change the combiner's logic. */
+function revertSignal(revertReason?: string): Signal {
+  return {
+    id: "sim-revert",
+    severity: "REVIEW",
+    title: "Transaction reverts in simulation",
+    detail: `Simulating this transaction against live state shows it reverts${
+      revertReason ? ` (${revertReason})` : ""
+    } — it will not execute as intended. Verify balances/allowances and the target before signing.`,
+  };
 }
 
 function makeVerdictId(): string {
@@ -74,9 +136,12 @@ function makeVerdictId(): string {
  * the SDK to a non-ALLOW fail-safe verdict). decide() itself never throws.
  */
 export async function guardIntent(intent: SimIntent): Promise<GuardResult> {
-  // Effect simulation (stubbed today) — gathered first so its notChecked is honest.
-  const { effects, simulated, notChecked } = await gatherEffects(intent);
-  const effectSigs = effectSignals(effects);
+  // Effect simulation — gathered first so its notChecked is honest.
+  const { effects, simulated, notChecked, provider, reverted, revertReason } =
+    await gatherEffects(intent);
+  // Effect-level signals (hidden-transfer / intent-mismatch) plus a revert signal
+  // when the sim shows the tx would fail. Both FEED decide() real facts.
+  const effectSigs = [...effectSignals(effects), ...(reverted ? [revertSignal(revertReason)] : [])];
 
   if (intent.type === "approve") {
     const token = getAddress(intent.token);
@@ -92,6 +157,8 @@ export async function guardIntent(intent: SimIntent): Promise<GuardResult> {
       // Surface the on-chain classification detail alongside the decisive reasons.
       reasons: [...result.reasons, ...spender.signals],
       verdictId: makeVerdictId(),
+      simProvider: provider,
+      reverted,
       spenderClassification: spender,
     };
   }
@@ -112,6 +179,8 @@ export async function guardIntent(intent: SimIntent): Promise<GuardResult> {
     ...result,
     reasons: [...result.reasons, ...destination.signals],
     verdictId: makeVerdictId(),
+    simProvider: provider,
+    reverted,
     destinationClassification: destination,
   };
 }

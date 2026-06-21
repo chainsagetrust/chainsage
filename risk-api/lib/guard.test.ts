@@ -63,6 +63,23 @@ describe("/guard input validation (route wiring)", () => {
     expect(json.ok).toBe(true);
     expect(json.data.type).toBe("approve");
   });
+
+  it("accepts an optional `from` (owner) to enable effect simulation", async () => {
+    const addr = "0x" + "1".repeat(40);
+    const owner = "0x" + "2".repeat(40);
+    const res = await guardValidationHandler(
+      post({ type: "approve", token: addr, spender: addr, amount: "1", from: owner })
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it("a malformed `from` → 400 (never reaches the chain)", async () => {
+    const addr = "0x" + "1".repeat(40);
+    const res = await guardValidationHandler(
+      post({ type: "transfer", token: addr, to: addr, amount: "1", from: "0xnope" })
+    );
+    expect(res.status).toBe(400);
+  });
 });
 
 describe("/guard response surface (engine decide via shim)", () => {

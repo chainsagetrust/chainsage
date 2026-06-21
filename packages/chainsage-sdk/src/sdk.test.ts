@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { scoreToVerdict, type Classification } from "@chainsage/engine";
+import { scoreToVerdict, type Classification, type SimOutcome } from "@chainsage/engine";
 import { ChainSage } from "./client";
 import { ChainSageDenied, ChainSageReview, ChainSageError } from "./errors";
-import { decisionToScore } from "./map";
+import { approveParts, decisionToScore, transferParts } from "./map";
 import type { Address, Intent } from "./types";
 
 // --- fixtures -------------------------------------------------------------
@@ -217,6 +217,53 @@ describe("verdict mapping (api mode, injected facts)", () => {
     expect(v1.verdictId).toMatch(/^vrd_/);
     expect(v1.verdictId).not.toBe(v2.verdictId);
     expect(v1.intent).toEqual(approveUnlimited);
+  });
+});
+
+// --- opt-in effect simulation: how the SDK CONSUMES a SimOutcome ----------
+// These exercise the pure merge (map.ts) offline — the same path client.ts feeds
+// once `simulate: true` gathers a live outcome. They prove a lethal effect
+// overrides an otherwise-safe verdict, a revert escalates to REVIEW, and the
+// simulated flag / provider / notChecked are surfaced honestly.
+
+describe("effect simulation consumption (map)", () => {
+  const outcome = (p: Partial<SimOutcome>): SimOutcome => ({
+    effects: {},
+    simulated: true,
+    provider: "tenderly",
+    reverted: false,
+    outflows: [],
+    approvals: [],
+    notChecked: ["Honeypot (sell-path) detection was NOT performed."],
+    ...p,
+  });
+
+  it("a hidden-transfer effect forces DENY even over a known-good spender", () => {
+    const parts = approveParts(KNOWN_GOOD, false, outcome({ effects: { hasHiddenTransfer: true }, provider: "rpc-trace" }));
+    expect(parts.decision).toBe("DENY");
+    expect(parts.simulated).toBe(true);
+    expect(parts.simProvider).toBe("rpc-trace");
+  });
+
+  it("a clean simulation leaves the classify verdict intact and reports simulated:true", () => {
+    const parts = approveParts(ESTABLISHED, false, outcome({}));
+    expect(parts.decision).toBe("ALLOW");
+    expect(parts.simulated).toBe(true);
+    expect(parts.simProvider).toBe("tenderly");
+    expect(parts.notChecked.join(" ")).toMatch(/honeypot/i);
+  });
+
+  it("a reverting simulation escalates to REVIEW", () => {
+    const parts = transferParts(ESTABLISHED, false, false, outcome({ reverted: true, revertReason: "insufficient balance" }));
+    expect(parts.decision).toBe("REVIEW");
+    expect(parts.reasons.join(" ")).toMatch(/revert/i);
+  });
+
+  it("with NO outcome (sim off) → simulated:false, provider 'none', effect checks listed unchecked", () => {
+    const parts = approveParts(ESTABLISHED, false);
+    expect(parts.simulated).toBe(false);
+    expect(parts.simProvider).toBe("none");
+    expect(parts.notChecked.join(" ")).toMatch(/honeypot|hidden-transfer|intent-mismatch/i);
   });
 });
 

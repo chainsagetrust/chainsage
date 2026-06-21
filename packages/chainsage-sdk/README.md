@@ -105,6 +105,28 @@ new ChainSage({ mode: "api", apiUrl: "https://…", apiKey: "…" }); // calls t
 Both modes use the **same verdict engine** (`@chainsage/engine`) — there is no second copy of
 the logic. Config also reads `CHAINSAGE_API_URL` / `CHAINSAGE_API_KEY` from the environment.
 
+## Live transaction-effect simulation (opt-in)
+
+By default the SDK is **classify-only** and honestly reports `verdict.simulated === false`. To
+also simulate the proposed `approve`/`transfer` against live Base state **before signing** —
+catching **hidden-transfer / over-approval** (→ DENY), **intent-mismatch** (→ DENY) and
+**revert** (→ REVIEW) — opt in (local mode):
+
+```ts
+const cs = new ChainSage({ mode: "local", simulate: true });
+const v = await cs.check(approveIntent);
+v.simulated;   // true only if a provider actually ran and parsed asset changes
+v.simProvider; // "tenderly" | "rpc-trace" | "rpc-call" | "none"
+```
+
+Configure a provider via the same env the Risk API uses: `TENDERLY_ACCESS_KEY` +
+`TENDERLY_ACCOUNT_SLUG` + `TENDERLY_PROJECT_SLUG` (primary; **third-party + paid**), or a
+`BASE_RPC_URL` whose node supports `debug_traceCall` (auto-detected). With **no** provider it
+degrades to revert-only `eth_call`, and with nothing at all it stays `simulated: false` — it
+**never** fabricates a clean sim or fails open. **Honeypot** (sell-path) detection needs a
+buy→sell round-trip and is **not** derivable from a single approve/transfer — it stays in
+`notChecked`. `simulate` is ignored in `api` mode (use the Risk API `/guard` with `from`).
+
 ## Auditability
 
 Every `Verdict` carries a unique `verdictId` and echoes the exact `intent` it judged, plus a

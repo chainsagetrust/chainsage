@@ -109,18 +109,36 @@ RPC), and runs the shared **`decide()`** combiner from `@chainsage/engine` — t
 combiner the Agent SDK calls. There is no second copy of the verdict logic.
 
 ```jsonc
-{ "type": "approve", "token": "0x…", "spender": "0x…", "amount": "unlimited" }
+// add an optional `from` (owner) to enable live transaction-effect simulation:
+{ "type": "approve", "token": "0x…", "spender": "0x…", "amount": "unlimited", "from": "0x…" }
 ```
 
-Returns `{ verdict, reasons[], simulated, verdictId, signals[], notChecked[],
-spenderClassification?, destinationClassification? }`.
+Returns `{ verdict, reasons[], simulated, simProvider, reverted, verdictId, signals[],
+notChecked[], spenderClassification?, destinationClassification? }`.
 
 The verdict is the worst severity across all gathered signals (`DENY > REVIEW > ALLOW`).
-Approval/transfer signals are **live** (same calibration as `/simulate`). Transaction-effect
-signals — **honeypot**, **hidden-transfer**, **intent-mismatch** — are handled by the
-combiner but their on-chain *gathering* (debug_traceCall / fork) is **not yet wired**, so
-the response reports **`simulated: false`** and lists those checks in `notChecked[]`. It
-never claims a clean simulation it did not run.
+Approval/transfer signals are **live** (same calibration as `/simulate`).
+
+**Transaction-effect simulation (live).** When the request carries a `from` (owner) **and**
+a provider is configured, `/guard` simulates the proposed tx against live Base state before
+signing and feeds the combiner real effects:
+
+- **hidden-transfer / over-approval** — funds reach an address other than the stated
+  counterparty, or the tx grants approvals beyond the stated intent → **DENY**.
+- **intent-mismatch** — the simulated net effect contradicts the declared intent (wrong
+  token/recipient, or a materially short delivery, e.g. fee-on-transfer) → **DENY**.
+- **revert** — the tx reverts in simulation (won't execute as intended) → **REVIEW**.
+
+`simProvider` reports which provider ran — `tenderly` · `rpc-trace` · `rpc-call` (degraded,
+revert-only) · `none`. **`simulated` is `true` only when a real effect simulation ran and
+parsed asset changes.** No `from`, no provider, an error, or a timeout → `simulated: false`,
+the unrun checks listed in `notChecked[]`, and the verdict left to the other real signals —
+it **never** fabricates a clean simulation or fails open. See
+[Configuration](#configuration-environment) for `TENDERLY_*` / `SIM_TIMEOUT_MS`.
+
+> **Honest limit:** **honeypot** (sell-path) detection needs a buy→sell round-trip, which a
+> single approve/transfer intent can't exercise — it is always listed in `notChecked[]`. The
+> combiner still judges a honeypot the moment a future swap-simulation supplies it.
 
 ---
 
@@ -144,12 +162,16 @@ never claims a clean simulation it did not run.
 
 ## Configuration (environment)
 
-| Var                     | Required | Purpose                                                        |
-| ----------------------- | -------- | -------------------------------------------------------------- |
-| `BASE_RPC_URL`          | no\*     | Base mainnet RPC. **Server-side only — never `NEXT_PUBLIC_`.** |
-| `RISK_API_KEYS`         | no       | Comma-separated API-key allowlist.                             |
-| `DISABLE_DEMO_KEY`      | no       | `1` to reject the public `demo` key.                           |
-| `RISK_API_CORS_ORIGINS` | no       | Comma-separated allowed origins (default `*`).                 |
+| Var                     | Required | Purpose                                                                                  |
+| ----------------------- | -------- | ---------------------------------------------------------------------------------------- |
+| `BASE_RPC_URL`          | no\*     | Base mainnet RPC. **Server-side only — never `NEXT_PUBLIC_`.** `/guard` also auto-detects `debug_traceCall` support here for the `rpc-trace` simulation provider. |
+| `RISK_API_KEYS`         | no       | Comma-separated API-key allowlist.                                                       |
+| `DISABLE_DEMO_KEY`      | no       | `1` to reject the public `demo` key.                                                     |
+| `RISK_API_CORS_ORIGINS` | no       | Comma-separated allowed origins (default `*`).                                           |
+| `TENDERLY_ACCESS_KEY`   | no       | Enables the **primary** `/guard` effect-simulation provider. **Third-party + paid** ([tenderly.co](https://tenderly.co)) — the tx is simulated on Tenderly's servers and counts against your quota. Server-side only. |
+| `TENDERLY_ACCOUNT_SLUG` | no       | Tenderly account slug (required with the access key).                                    |
+| `TENDERLY_PROJECT_SLUG` | no       | Tenderly project slug (required with the access key).                                    |
+| `SIM_TIMEOUT_MS`        | no       | Per-simulation hard timeout (ms, default `4000`). A timeout = "did not run", never a clean sim. |
 
 \*Falls back to the public `https://mainnet.base.org`, which rate-limits aggressively —
 the ~30-day approval-log scan in `/score` is slow/flaky without a dedicated key (Alchemy /
