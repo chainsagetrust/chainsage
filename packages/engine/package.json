@@ -12,7 +12,9 @@
     "./risk": "./risk.ts",
     "./verdict": "./verdict.ts",
     "./classify": "./classify.ts",
-    "./simulate": "./simulate.ts"
+    "./simulate": "./simulate.ts",
+    "./decide": "./decide.ts",
+    "./guard": "./guard.ts"
   },
   "scripts": {
     "test": "vitest run"

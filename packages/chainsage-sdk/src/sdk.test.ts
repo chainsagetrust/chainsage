@@ -129,6 +129,24 @@ describe("fail-safe: errors never yield ALLOW", () => {
   });
 });
 
+// --- honesty: the SDK never fabricates a simulation it did not run ---------
+
+describe("simulated is honest (SDK runs no effect simulation)", () => {
+  it("a successful verdict reports simulated:false and lists effect checks in notChecked", async () => {
+    const cs = new ChainSage({ mode: "api", fetchImpl: okFetch(ESTABLISHED) });
+    const v = await cs.check(approveUnlimited);
+    expect(v.simulated).toBe(false);
+    expect(v.notChecked.join(" ")).toMatch(/honeypot|hidden-transfer|intent-mismatch/i);
+  });
+
+  it("a fail-safe verdict also reports simulated:false", async () => {
+    const cs = new ChainSage({ mode: "api", fetchImpl: throwingFetch() });
+    const v = await cs.check(approveUnlimited);
+    expect(v.failSafe).toBe(true);
+    expect(v.simulated).toBe(false);
+  });
+});
+
 // --- verdict mapping (proves ALLOW is reachable; not just always-blocking) -
 
 describe("verdict mapping (api mode, injected facts)", () => {

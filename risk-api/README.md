@@ -101,6 +101,27 @@ own contract → `DENY`, fresh-contract destination → `REVIEW`, otherwise `ALL
 > carries an explicit **`notChecked[]`** listing what was *not* simulated (e.g. token
 > honesty, your balance/allowance — the intent has no owner address).
 
+### `POST /api/v1/guard`
+
+The **Guardian verdict** for a proposed intent. Accepts the same `approve` / `transfer`
+intent shape as `/simulate`, gathers signals server-side (live Base reads via the server
+RPC), and runs the shared **`decide()`** combiner from `@chainsage/engine` — the *same*
+combiner the Agent SDK calls. There is no second copy of the verdict logic.
+
+```jsonc
+{ "type": "approve", "token": "0x…", "spender": "0x…", "amount": "unlimited" }
+```
+
+Returns `{ verdict, reasons[], simulated, verdictId, signals[], notChecked[],
+spenderClassification?, destinationClassification? }`.
+
+The verdict is the worst severity across all gathered signals (`DENY > REVIEW > ALLOW`).
+Approval/transfer signals are **live** (same calibration as `/simulate`). Transaction-effect
+signals — **honeypot**, **hidden-transfer**, **intent-mismatch** — are handled by the
+combiner but their on-chain *gathering* (debug_traceCall / fork) is **not yet wired**, so
+the response reports **`simulated: false`** and lists those checks in `notChecked[]`. It
+never claims a clean simulation it did not run.
+
 ---
 
 ## Auth, rate limits & CORS

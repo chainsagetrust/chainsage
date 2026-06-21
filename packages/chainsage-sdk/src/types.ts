@@ -72,6 +72,12 @@ export interface Verdict {
   intent: Intent;
   /** Things this verdict did NOT verify. No fabricated checks. */
   notChecked: string[];
+  /**
+   * True only if transaction-effect simulation actually ran. The SDK does not
+   * simulate effects (honeypot / hidden-transfer / intent-mismatch), so this is
+   * always false today — those checks appear in `notChecked`. Never fabricated.
+   */
+  simulated: boolean;
   /** True for forward-looking intent kinds (e.g. x402_pay) that are not yet live. */
   experimental: boolean;
   /** Where the verdict was computed. */
