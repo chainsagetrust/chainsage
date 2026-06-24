@@ -92,8 +92,8 @@ Bind component fills to the variable, never a raw hex, so theme swaps are a sing
 
 Institutional, precise, confident, AI-native. Mono for anything machine-truthful (numbers, addresses, verdicts). Never hype. Claims discipline:
 
-- Bankr integration is **building / outreach** — collaborative, never "live", never "partnership".
-- $SAGE is **launching natively on Bankr** — no supply figures, no invented mechanics.
+- Virtuals / ACP: ChainSage is **building toward** an ACP verdict service agents on Virtuals consult before executing — never "live on ACP", never "partnership". Virtuals is an agent ecosystem, not an executor — never write "Virtuals executes".
+- $SAGE is **launching on Virtuals via Genesis** — no supply figures, no invented mechanics.
 - Never fabricate technical integration details. State the position, not a claim.
 
 X: **@chainsagetrust** · Domain: **chainsage.finance** · GitHub: **github.com/chainsagetrust/chainsage**

@@ -6,7 +6,7 @@ import {
   HowItWorks,
   Roadmap,
   WhyNow,
-  Bankr,
+  Virtuals,
   Footer,
 } from "@/components/Sections";
 import { Demo } from "@/components/Demo";
@@ -26,7 +26,7 @@ export default function Home() {
         <Roadmap />
         <TrustNetwork />
         <WhyNow />
-        <Bankr />
+        <Virtuals />
         <LaunchCTA />
       </main>
       <Footer />

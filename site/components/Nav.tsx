@@ -11,7 +11,7 @@ const LINKS = [
   { label: "How it Works", href: "#how" },
   { label: "Product", href: "#roadmap" },
   { label: "Demo", href: "#demo" },
-  { label: "Bankr", href: "#bankr" },
+  { label: "Virtuals", href: "#virtuals" },
 ];
 
 export function Nav() {

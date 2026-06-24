@@ -380,17 +380,17 @@ export function WhyNow() {
   );
 }
 
-/* =============================================== 9. Integrated with Bankr */
+/* ================================================== 9. Built on Virtuals */
 
-export function Bankr() {
+export function Virtuals() {
   const reduce = useReducedMotion();
   return (
-    <section id="bankr" className="mx-auto max-w-5xl px-5 py-24 sm:px-8">
+    <section id="virtuals" className="mx-auto max-w-5xl px-5 py-24 sm:px-8">
       <Reveal>
         <SectionHeading
-          eyebrow="Integrated with Bankr"
+          eyebrow="Built on Virtuals"
           title="Execution, meet judgment."
-          intro="Bankr executes. ChainSage decides. Together they close the loop — an agent that can act, and a verdict that says whether it should."
+          intro="Agents on Virtuals execute. ChainSage decides whether they should — an ACP verdict service other agents call before they act."
         />
       </Reveal>
 
@@ -411,9 +411,11 @@ export function Bankr() {
           </div>
 
           <div className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-center">
-            {/* Bankr node */}
+            {/* executor agent node */}
             <div className="flex-1 rounded-2xl border border-[var(--card-border)] bg-[var(--bg-2)]/60 p-5 text-center">
-              <div className="font-display text-lg font-bold text-text">Bankr</div>
+              <div className="font-display text-lg font-bold text-text">
+                Agent on Virtuals
+              </div>
               <div className="mt-1 font-mono text-[0.7rem] uppercase tracking-[0.1em] text-text-3">
                 agent · executes
               </div>
@@ -460,9 +462,9 @@ export function Bankr() {
           </div>
 
           <p className="mt-8 text-center text-[0.95rem] text-text-2">
-            <span className="font-mono text-text">$SAGE</span> launches natively
-            on Bankr. Integration is in progress — we&apos;re building it
-            together.
+            <span className="font-mono text-text">$SAGE</span> launches on
+            Virtuals via Genesis. We&apos;re building ChainSage as an ACP verdict
+            service — integration in progress, not yet live.
           </p>
         </GlassCard>
       </Reveal>
