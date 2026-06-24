@@ -121,7 +121,7 @@ export default function Page() {
             <span className="text-sm text-text-2">ChainSage — the trust layer for autonomous finance.</span>
           </div>
           <div className="mono text-xs text-text-3">
-            $SAGE launching natively on Bankr · Bankr integration in progress
+            $SAGE launching on Virtuals via Genesis · ACP verdict service in progress
           </div>
         </div>
         <p className="mono mt-4 text-xs leading-relaxed text-text-3">

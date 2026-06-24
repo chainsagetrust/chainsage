@@ -56,7 +56,8 @@ it; the SDK bundles it. No second copy of any verdict logic exists.
 
 ## Honest status
 
-- **Bankr**: integration is *building / in progress* — collaborative, not a
-  confirmed partnership.
-- **$SAGE**: *launching natively on Bankr* — no supply figures or mechanics claimed.
+- **Virtuals / ACP**: ChainSage is *building toward* an ACP verdict service that
+  agents on Virtuals call before executing — in progress, not yet live, and not a
+  claimed partnership.
+- **$SAGE**: *launching on Virtuals via Genesis* — no supply figures or mechanics claimed.
 - **Guardian**: live and real against Base mainnet today.

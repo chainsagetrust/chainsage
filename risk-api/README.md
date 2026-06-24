@@ -249,6 +249,7 @@ and `isUnlimitedAmount` are unit-tested against calibration tables (no network),
 
 ## Claims discipline
 
-ChainSage is the trust layer for autonomous finance — not a wallet, not a token casino.
-Bankr integration is **in progress** (collaborative, not "live"). $SAGE is **launching
-natively on Bankr** — no supply figures, no invented mechanics.
+ChainSage is the trust layer for the agent economy, built on Virtuals — not a wallet,
+not a token casino. The ACP verdict service (agents on Virtuals consulting ChainSage
+before executing) is **building toward** integration — not yet live, not a partnership.
+$SAGE is **launching on Virtuals via Genesis** — no supply figures, no invented mechanics.
