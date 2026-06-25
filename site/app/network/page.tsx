@@ -250,6 +250,85 @@ function Header() {
 
 /* ------------------------------------------------------------------- graph */
 
+/** True when the user has asked the OS for reduced motion. SSR-safe (false until mounted). */
+function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const apply = () => setReduced(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+  return reduced;
+}
+
+const DRAINER_LC = DRAINER.toLowerCase();
+const TAU = Math.PI * 2;
+const RADIUS_OF = (node: SeedNode, score: number) => radiusByKind[node.kind] + score * 6;
+
+/** Live, mutable per-node sim state. Seeded from the hand-authored seed positions. */
+interface PNode {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  hx: number; // home (anchor) — the seed position the node breathes around
+  hy: number;
+  ph: number; // breathing phase offset so nodes don't pulse in lockstep
+}
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  r: number;
+  o: number;
+  c: string;
+}
+
+// Brand-only palette for ambient atmosphere (NEVER verdict colors).
+const PARTICLE_COLORS = [chainsageColors.primary, chainsageColors.accent, chainsageColors.secondary];
+
+/** Hop distance from the drainer over the undirected edge set (for ripple timing). */
+function hopDistances(edges: { a: string; b: string }[]): Map<string, number> {
+  const adj = new Map<string, string[]>();
+  for (const { a, b } of edges) {
+    (adj.get(a) ?? adj.set(a, []).get(a)!).push(b);
+    (adj.get(b) ?? adj.set(b, []).get(b)!).push(a);
+  }
+  const dist = new Map<string, number>();
+  const queue = [DRAINER_LC];
+  dist.set(DRAINER_LC, 0);
+  while (queue.length) {
+    const cur = queue.shift()!;
+    for (const nb of adj.get(cur) ?? []) {
+      if (!dist.has(nb)) {
+        dist.set(nb, dist.get(cur)! + 1);
+        queue.push(nb);
+      }
+    }
+  }
+  return dist;
+}
+
+// Force-sim tuning. Mild on purpose: nodes are anchored to their seed positions
+// and breathe, so the layout stays recognizable and never drifts away.
+const ANCHOR_K = 0.022;
+const REPULSE = 1500;
+const LINK_K = 0.0016;
+const FRICTION = 0.9;
+const BREATH_AMP = 4.5;
+const BREATH_SPEED = 0.00042;
+const HOP_MS = 230; // how long the red wave takes to cross one edge
+const BASE_DELAY = 90;
+
+/**
+ * The interactive graph. The geometry moves (force sim + breathing) and the
+ * displayed score number/ring TWEEN toward the real engine score — but every
+ * value converges to `scores`, which the parent computes from the real engine.
+ * Animation never invents a number; it only paces what is already true.
+ */
 function Graph({
   scores,
   incidentActive,
@@ -263,6 +342,8 @@ function Graph({
   selected: string | null;
   onSelect: (a: string) => void;
 }) {
+  const reduced = usePrefersReducedMotion();
+
   // Unique undirected edges between positioned nodes.
   const edges = useMemo(() => {
     const seen = new Set<string>();
@@ -279,79 +360,433 @@ function Graph({
     return out;
   }, []);
 
-  const drainerPos = POSITIONS[DRAINER.toLowerCase()];
+  const hops = useMemo(() => hopDistances(edges), [edges]);
+  const restLen = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const { a, b } of edges) {
+      const pa = POSITIONS[a];
+      const pb = POSITIONS[b];
+      m.set(`${a}-${b}`, Math.hypot(pa.x - pb.x, pa.y - pb.y));
+    }
+    return m;
+  }, [edges]);
+
+  const [hover, setHover] = useState<string | null>(null);
+  const [, setTick] = useState(0); // forces a re-render each animation frame
+
+  // Latest props mirrored into refs so the long-lived RAF closure reads fresh values.
+  const scoresRef = useRef(scores);
+  scoresRef.current = scores;
+  const incidentRef = useRef(incidentActive);
+  incidentRef.current = incidentActive;
+
+  // Sim state lives in refs (mutated per frame; React re-render is just a paint trigger).
+  const nodesRef = useRef<Map<string, PNode> | null>(null);
+  const dispRef = useRef<Map<string, number> | null>(null);
+  const particlesRef = useRef<Particle[]>([]);
+  const phaseStartRef = useRef(0); // when the current incident/reset phase began (ms)
+
+  if (!nodesRef.current) {
+    const nm = new Map<string, PNode>();
+    const dm = new Map<string, number>();
+    NODES.forEach((n, i) => {
+      const p = POSITIONS[n.id.toLowerCase()];
+      nm.set(n.id.toLowerCase(), { x: p.x, y: p.y, vx: 0, vy: 0, hx: p.x, hy: p.y, ph: (i * TAU) / NODES.length });
+      dm.set(n.id.toLowerCase(), 0); // start empty → rings fill / numbers count up on first load
+    });
+    nodesRef.current = nm;
+    dispRef.current = dm;
+  }
+
+  // Mark a new phase (incident fired / reset) and kick the nodes outward from the
+  // drainer so the collapse physically shoves its neighbours — a real shockwave.
+  useEffect(() => {
+    phaseStartRef.current = typeof performance !== "undefined" ? performance.now() : 0;
+    if (incidentActive && !reduced) {
+      const nodes = nodesRef.current!;
+      const d = nodes.get(DRAINER_LC);
+      if (d) {
+        for (const [id, n] of nodes) {
+          if (id === DRAINER_LC) continue;
+          const dx = n.x - d.x;
+          const dy = n.y - d.y;
+          const dist = Math.hypot(dx, dy) || 1;
+          const kick = 240 / dist; // closer neighbours get shoved harder
+          n.vx += (dx / dist) * kick;
+          n.vy += (dy / dist) * kick;
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incidentActive]);
+
+  // Reduced-motion: no sim, no drift. Snap geometry home and the score to the real
+  // value immediately, then a single repaint. The honest data still updates.
+  useEffect(() => {
+    if (!reduced) return;
+    const nodes = nodesRef.current!;
+    const disp = dispRef.current!;
+    for (const [id, n] of nodes) {
+      n.x = n.hx;
+      n.y = n.hy;
+      n.vx = 0;
+      n.vy = 0;
+      disp.set(id, scores.get(id)?.score ?? 0.5);
+    }
+    setTick((t) => t + 1);
+  }, [reduced, scores, incidentActive]);
+
+  // The single RAF loop: force integration + score tween + particle drift.
+  // Pauses when the tab is hidden and when reduced-motion is on.
+  useEffect(() => {
+    if (reduced) return;
+
+    // Seed the ambient particle field once (deterministic-enough; client only).
+    if (particlesRef.current.length === 0) {
+      const N = 16;
+      for (let i = 0; i < N; i++) {
+        particlesRef.current.push({
+          x: Math.random() * VIEWBOX.w,
+          y: Math.random() * VIEWBOX.h,
+          vx: (Math.random() - 0.5) * 5,
+          vy: (Math.random() - 0.5) * 5,
+          r: 0.8 + Math.random() * 1.8,
+          o: 0.04 + Math.random() * 0.1,
+          c: PARTICLE_COLORS[i % PARTICLE_COLORS.length],
+        });
+      }
+    }
+
+    let raf = 0;
+    let last = typeof performance !== "undefined" ? performance.now() : 0;
+    let running = true;
+
+    const nodeArr = [...nodesRef.current!.values()];
+    const nodeIds = [...nodesRef.current!.keys()];
+
+    const step = (now: number) => {
+      if (!running) return;
+      const dt = Math.min(0.05, (now - last) / 1000); // clamp big gaps (tab refocus)
+      last = now;
+      const f = Math.min(2, dt * 60); // frame-normalized factor
+      const nodes = nodesRef.current!;
+      const disp = dispRef.current!;
+      const T = now;
+
+      // --- forces ---
+      for (let i = 0; i < nodeArr.length; i++) {
+        const n = nodeArr[i];
+        const tx = n.hx + Math.sin(T * BREATH_SPEED + n.ph) * BREATH_AMP;
+        const ty = n.hy + Math.cos(T * BREATH_SPEED * 0.9 + n.ph) * BREATH_AMP;
+        n.vx += (tx - n.x) * ANCHOR_K * f;
+        n.vy += (ty - n.y) * ANCHOR_K * f;
+      }
+      // pairwise repulsion (11 nodes → trivial)
+      for (let i = 0; i < nodeArr.length; i++) {
+        for (let j = i + 1; j < nodeArr.length; j++) {
+          const a = nodeArr[i];
+          const b = nodeArr[j];
+          let dx = a.x - b.x;
+          let dy = a.y - b.y;
+          let d2 = dx * dx + dy * dy;
+          if (d2 < 1) d2 = 1;
+          const force = Math.min(0.5, REPULSE / d2);
+          const d = Math.sqrt(d2);
+          const fx = (dx / d) * force * f;
+          const fy = (dy / d) * force * f;
+          a.vx += fx;
+          a.vy += fy;
+          b.vx -= fx;
+          b.vy -= fy;
+        }
+      }
+      // link springs (keep edge lengths near their seed rest length → edges flex)
+      for (const { a, b } of edges) {
+        const na = nodes.get(a)!;
+        const nb = nodes.get(b)!;
+        const dx = nb.x - na.x;
+        const dy = nb.y - na.y;
+        const d = Math.hypot(dx, dy) || 1;
+        const rest = restLen.get(`${a}-${b}`) ?? d;
+        const pull = (d - rest) * LINK_K * f;
+        const ux = dx / d;
+        const uy = dy / d;
+        na.vx += ux * pull;
+        na.vy += uy * pull;
+        nb.vx -= ux * pull;
+        nb.vy -= uy * pull;
+      }
+      // integrate + friction
+      const fric = Math.pow(FRICTION, f);
+      for (const n of nodeArr) {
+        n.vx *= fric;
+        n.vy *= fric;
+        n.x += n.vx * f;
+        n.y += n.vy * f;
+      }
+
+      // --- score tween: ease displayed → real, gated by the ripple wavefront ---
+      const phaseAge = now - phaseStartRef.current;
+      const incident = incidentRef.current;
+      const sc = scoresRef.current;
+      const ease = 1 - Math.exp(-dt * 6); // ~fast count, still smooth
+      for (const id of nodeIds) {
+        const target = sc.get(id)?.score ?? 0.5;
+        const hop = hops.get(id) ?? 6;
+        const delay = BASE_DELAY + hop * HOP_MS;
+        // Hold the value until the wavefront reaches this node, so the drain
+        // (and the recovery on reset) visibly travels outward node-by-node.
+        if (phaseAge < delay) continue;
+        const cur = disp.get(id)!;
+        disp.set(id, cur + (target - cur) * ease);
+      }
+
+      // --- particles drift, wrapping around the canvas ---
+      for (const p of particlesRef.current) {
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        if (p.x < -10) p.x = VIEWBOX.w + 10;
+        if (p.x > VIEWBOX.w + 10) p.x = -10;
+        if (p.y < -10) p.y = VIEWBOX.h + 10;
+        if (p.y > VIEWBOX.h + 10) p.y = -10;
+      }
+
+      setTick((t) => (t + 1) % 1e9);
+      raf = requestAnimationFrame(step);
+    };
+
+    const onVisibility = () => {
+      if (document.hidden) {
+        running = false;
+        cancelAnimationFrame(raf);
+      } else if (!running) {
+        running = true;
+        last = performance.now();
+        raf = requestAnimationFrame(step);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    raf = requestAnimationFrame(step);
+    return () => {
+      running = false;
+      cancelAnimationFrame(raf);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reduced, edges, hops, restLen]);
+
+  // --- render (reads the freshly-mutated refs) ---
+  const nodes = nodesRef.current!;
+  const disp = dispRef.current!;
+  const now = typeof performance !== "undefined" ? performance.now() : 0;
+  const phaseAge = now - phaseStartRef.current;
+
+  const neighbors = useMemo(() => {
+    if (!hover) return null;
+    const set = new Set<string>([hover]);
+    for (const { a, b } of edges) {
+      if (a === hover) set.add(b);
+      if (b === hover) set.add(a);
+    }
+    return set;
+  }, [hover, edges]);
+
+  const drainer = nodes.get(DRAINER_LC)!;
+  const shake = incidentActive && !reduced && phaseAge < 900;
 
   return (
-    <svg viewBox={`0 0 ${VIEWBOX.w} ${VIEWBOX.h}`} className="h-auto w-full" role="img" aria-label="Trust network graph">
-      {/* edges */}
+    <svg
+      viewBox={`0 0 ${VIEWBOX.w} ${VIEWBOX.h}`}
+      className="h-auto w-full select-none"
+      role="img"
+      aria-label="Trust network graph"
+    >
+      <defs>
+        {/* Ambient brand-flow gradient for the travelling edge pulse (decorative). */}
+        <linearGradient id="csFlow" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor={chainsageColors.primary} stopOpacity="0" />
+          <stop offset="50%" stopColor={chainsageColors.secondary} stopOpacity="0.9" />
+          <stop offset="100%" stopColor={chainsageColors.accent} stopOpacity="0" />
+        </linearGradient>
+        {/* Luminous sheen overlaid on every node so it reads as a 3-D object. */}
+        <radialGradient id="csSheen" cx="38%" cy="32%" r="75%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.35" />
+          <stop offset="45%" stopColor="#ffffff" stopOpacity="0.05" />
+          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+        </radialGradient>
+        {/* Background atmosphere — faint brand-tinted depth, not verdict color. */}
+        <radialGradient id="csAtmosphere" cx="50%" cy="42%" r="70%">
+          <stop offset="0%" stopColor={chainsageColors.primary} stopOpacity="0.10" />
+          <stop offset="55%" stopColor={chainsageColors.accent} stopOpacity="0.04" />
+          <stop offset="100%" stopColor={chainsageColors.primary} stopOpacity="0" />
+        </radialGradient>
+        <filter id="csGlow" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="6" result="b" />
+          <feMerge>
+            <feMergeNode in="b" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+        <filter id="csNodeShadow" x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#000" floodOpacity="0.35" />
+        </filter>
+      </defs>
+
+      {/* background atmosphere */}
+      <rect x="0" y="0" width={VIEWBOX.w} height={VIEWBOX.h} fill="url(#csAtmosphere)" />
+
+      {/* drifting particle field (brand-tinted; hidden under reduced motion) */}
+      {!reduced &&
+        particlesRef.current.map((p, i) => (
+          <circle key={`pt-${i}`} cx={p.x} cy={p.y} r={p.r} fill={p.c} opacity={p.o} />
+        ))}
+
+      {/* structural edges (carry verdict-red state during an incident) */}
       {edges.map(({ a, b }) => {
-        const pa = POSITIONS[a];
-        const pb = POSITIONS[b];
-        const touchesDrainer = incidentActive && (a === DRAINER.toLowerCase() || b === DRAINER.toLowerCase());
-        const lowEnd = incidentActive && (scores.get(a)!.score < WARN_THRESHOLD || scores.get(b)!.score < WARN_THRESHOLD);
-        const stroke = touchesDrainer || lowEnd ? chainsageColors.danger : "var(--hairline)";
+        const na = nodes.get(a)!;
+        const nb = nodes.get(b)!;
+        const touchesDrainer = incidentActive && (a === DRAINER_LC || b === DRAINER_LC);
+        const lowEnd =
+          incidentActive && ((disp.get(a) ?? 0.5) < WARN_THRESHOLD || (disp.get(b) ?? 0.5) < WARN_THRESHOLD);
+        // Wavefront flash: brighten red as the ripple crosses this edge, then settle.
+        const minHop = Math.min(hops.get(a) ?? 6, hops.get(b) ?? 6);
+        const edgeAge = phaseAge - (BASE_DELAY + minHop * HOP_MS);
+        const flash = incidentActive && edgeAge >= 0 && edgeAge < 520 ? 1 - edgeAge / 520 : 0;
+        const isRed = touchesDrainer || lowEnd;
+        const dim = neighbors && !(neighbors.has(a) && neighbors.has(b));
+        const stroke = isRed ? chainsageColors.danger : neighbors && !dim ? chainsageColors.primary : "var(--hairline)";
+        const baseOp = isRed ? (touchesDrainer ? 0.6 : 0.4) : neighbors && !dim ? 0.5 : 1;
         return (
-          <line
-            key={`${a}-${b}`}
-            className="edge"
-            x1={pa.x}
-            y1={pa.y}
-            x2={pb.x}
-            y2={pb.y}
-            stroke={stroke}
-            strokeOpacity={touchesDrainer ? 0.6 : lowEnd ? 0.4 : 1}
-            strokeWidth={1.25}
-          />
+          <g key={`${a}-${b}`}>
+            <line
+              className="edge"
+              x1={na.x}
+              y1={na.y}
+              x2={nb.x}
+              y2={nb.y}
+              stroke={stroke}
+              strokeOpacity={dim ? 0.12 : Math.min(1, baseOp + flash * 0.6)}
+              strokeWidth={1.25 + flash * 2.5}
+            />
+            {/* ambient trust-flow pulse — suppressed where the edge has gone red */}
+            {!reduced && !isRed && !dim && (
+              <line
+                x1={na.x}
+                y1={na.y}
+                x2={nb.x}
+                y2={nb.y}
+                className="cs-edge-flow"
+                stroke="url(#csFlow)"
+                strokeWidth={2}
+                strokeOpacity={0.5}
+                strokeDasharray="14 120"
+                style={{ animationDelay: `${(minHop % 4) * -0.5}s` }}
+              />
+            )}
+          </g>
         );
       })}
 
-      {/* incident ripple (decorative; values are real) */}
-      {incidentActive && drainerPos && (
-        <circle
-          key={rippleKey}
-          className="cs-ripple"
-          cx={drainerPos.x}
-          cy={drainerPos.y}
-          fill="none"
-          stroke={chainsageColors.danger}
-          strokeWidth={2}
-        />
+      {/* cinematic shockwave off the collapsing node (decorative; values are real) */}
+      {incidentActive && drainer && (
+        <g key={rippleKey}>
+          {!reduced ? (
+            <>
+              <circle
+                className="cs-shockwave"
+                cx={drainer.x}
+                cy={drainer.y}
+                fill="none"
+                stroke={chainsageColors.danger}
+              />
+              <circle
+                className="cs-shockwave-2"
+                cx={drainer.x}
+                cy={drainer.y}
+                fill="none"
+                stroke={chainsageColors.danger}
+              />
+            </>
+          ) : (
+            <circle className="cs-ripple" cx={drainer.x} cy={drainer.y} fill="none" stroke={chainsageColors.danger} strokeWidth={2} />
+          )}
+        </g>
       )}
 
       {/* nodes */}
       {NODES.map((node) => {
         const k = node.id.toLowerCase();
-        const sc = scores.get(k)!;
-        const { color } = bandOf(sc.score);
-        const r = radiusByKind[node.kind] + sc.score * 6;
+        const n = nodes.get(k)!;
+        const shown = disp.get(k) ?? 0.5; // tweened toward the real engine score
+        const { color } = bandOf(shown);
+        const hop = hops.get(k) ?? 6;
+        // flinch: a brief radius kick as the wavefront hits this node
+        const u = phaseAge - (BASE_DELAY + hop * HOP_MS);
+        const flinch = incidentActive && !reduced && u >= 0 && u < 320 ? Math.sin((Math.PI * u) / 320) * 5 : 0;
+        const r = RADIUS_OF(node, shown) + flinch + (hover === k ? 3 : 0);
         const isSel = selected === k;
-        const p = POSITIONS[k];
+        const isHover = hover === k;
+        const dimmed = neighbors ? !neighbors.has(k) : false;
+
+        // score ring (animates as `shown` tweens)
+        const ringR = r + 6;
+        const circ = TAU * ringR;
+        const fillFrac = Math.max(0, Math.min(1, shown));
+
         return (
           <g
             key={k}
             className="node"
-            transform={`translate(${p.x} ${p.y})`}
+            transform={`translate(${n.x} ${n.y})`}
             onClick={() => onSelect(k)}
-            style={{ cursor: "pointer" }}
+            onMouseEnter={() => setHover(k)}
+            onMouseLeave={() => setHover((h) => (h === k ? null : h))}
+            style={{ cursor: "pointer", opacity: dimmed ? 0.32 : 1 }}
           >
-            {isSel && <circle r={r + 7} fill="none" stroke={color} strokeWidth={1.5} strokeOpacity={0.5} />}
-            <circle
-              r={r}
-              fill={`${color}26`}
-              stroke={color}
-              strokeWidth={2}
-              strokeDasharray={node.real ? undefined : "4 3"}
-            />
-            <text textAnchor="middle" dy={4} className="mono" fontSize={11} fill="var(--text)" style={{ pointerEvents: "none" }}>
-              {Math.round(sc.score * 100)}
-            </text>
-            <text
-              textAnchor="middle"
-              y={r + 15}
-              fontSize={11}
-              fill="var(--text-2)"
-              style={{ pointerEvents: "none" }}
-            >
+            <g className={k === DRAINER_LC && shake ? "cs-node-shake" : undefined}>
+              {/* score-colored halo (depth — glow in the node's OWN score color) */}
+              <circle r={r + (isHover ? 10 : 6)} fill={color} opacity={isHover ? 0.3 : 0.16} filter="url(#csGlow)" />
+
+              {/* selection ring */}
+              {isSel && <circle r={ringR + 5} fill="none" stroke={color} strokeWidth={1.5} strokeOpacity={0.5} />}
+
+              {/* animated score ring (track + fill arc) */}
+              <circle r={ringR} fill="none" stroke="var(--hairline)" strokeWidth={2} />
+              <circle
+                r={ringR}
+                fill="none"
+                stroke={color}
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeDasharray={`${circ * fillFrac} ${circ}`}
+                transform="rotate(-90)"
+                style={{ transition: "stroke-dasharray 0.12s linear" }}
+              />
+
+              {/* node body: solid surface + inner sheen for a luminous, 3-D read */}
+              <circle
+                r={r}
+                fill="var(--node-fill)"
+                stroke={color}
+                strokeWidth={isHover ? 2.5 : 2}
+                strokeDasharray={node.real ? undefined : "4 3"}
+                filter="url(#csNodeShadow)"
+              />
+              <circle r={r} fill={`${color}26`} />
+              <circle r={r} fill="url(#csSheen)" />
+
+              <text
+                textAnchor="middle"
+                dy={4}
+                className="mono"
+                fontSize={11}
+                fill="var(--text)"
+                style={{ pointerEvents: "none" }}
+              >
+                {Math.round(shown * 100)}
+              </text>
+            </g>
+            <text textAnchor="middle" y={r + 16} fontSize={11} fill="var(--text-2)" style={{ pointerEvents: "none" }}>
               {node.label}
             </text>
           </g>
