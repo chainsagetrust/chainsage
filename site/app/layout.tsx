@@ -55,6 +55,9 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.svg",
   },
+  other: {
+    "virtual-protocol-site-verification": "28dd54833147f98202c70ae90f957f8e",
+  },
 };
 
 export const viewport: Viewport = {
