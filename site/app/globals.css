@@ -173,12 +173,47 @@ body {
   66% { transform: translate(12px, -8px); }
 }
 
-/* Trust Network graph (/network): incident ripple, live signal feed, node/edge tweens. */
+/* ============================================================================
+   Trust Network graph (/network).
+   The geometry (node position + radius) is driven by a RAF force-sim in JS, so
+   we deliberately do NOT put CSS transitions on x/y/r — that would fight the
+   sim and smear the animated score tween. CSS here is only for the ambient,
+   time-based effects (edge flow, shockwave, feed) and discrete hover/dim state.
+   ========================================================================== */
+
+/* Legacy single-ring ripple (kept as the reduced-motion-safe fallback marker). */
 @keyframes cs-ripple {
   0% { r: 10; opacity: 0.55; }
   100% { r: 220; opacity: 0; }
 }
 .cs-ripple { animation: cs-ripple 1.6s var(--ease) forwards; }
+
+/* Cinematic shockwave — the violent radial pulse off the collapsing node. */
+@keyframes cs-shockwave {
+  0%   { r: 6;   opacity: 0.7;  stroke-width: 7; }
+  100% { r: 300; opacity: 0;    stroke-width: 0.5; }
+}
+.cs-shockwave  { animation: cs-shockwave 1.15s cubic-bezier(0.16, 0.84, 0.3, 1) forwards; }
+.cs-shockwave-2 { animation: cs-shockwave 1.5s cubic-bezier(0.16, 0.84, 0.3, 1) 0.12s forwards; }
+
+/* Drainer node shaking as it cracks (applied to an INNER group so it composes
+   with the outer translate() that positions the node). */
+@keyframes cs-node-shake {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(-2.5px, 1.5px) rotate(-1deg); }
+  40% { transform: translate(2.5px, -1.5px) rotate(1deg); }
+  60% { transform: translate(-2px, -1px) rotate(-0.6deg); }
+  80% { transform: translate(2px, 1px) rotate(0.6deg); }
+}
+.cs-node-shake { animation: cs-node-shake 0.42s linear 2; transform-origin: center; }
+
+/* Ambient trust-flow pulse travelling along an edge (brand gradient, low opacity).
+   Pure decoration — it never encodes verdict state. */
+@keyframes cs-edge-flow { to { stroke-dashoffset: -134; } }
+.cs-edge-flow {
+  animation: cs-edge-flow 2.6s linear infinite;
+  pointer-events: none;
+}
 
 @keyframes cs-feed-in {
   from { opacity: 0; transform: translateX(8px); }
@@ -186,18 +221,21 @@ body {
 }
 .cs-feed-in { animation: cs-feed-in 0.35s var(--ease) both; }
 
-.node { transition: opacity 0.4s var(--ease); }
-.node circle {
-  transition:
-    fill 0.7s var(--ease),
-    stroke 0.7s var(--ease),
-    r 0.7s var(--ease);
-}
-.edge { transition: stroke 0.7s var(--ease), stroke-opacity 0.7s var(--ease); }
+/* Only discrete state (hover dim / selection) gets a CSS transition. */
+.node { transition: opacity 0.35s var(--ease); }
+.node circle { transition: stroke-width 0.25s var(--ease); }
+.edge { transition: stroke 0.45s var(--ease), stroke-opacity 0.45s var(--ease); }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .cs-hero-orb-a,
   .cs-hero-orb-b { animation: none; }
-  .cs-ripple { display: none; }
+  .cs-ripple,
+  .cs-shockwave,
+  .cs-shockwave-2,
+  .cs-node-shake,
+  .cs-edge-flow { animation: none; }
+  /* Reduced-motion graph: edge-flow pulses are hidden entirely (the JS sim is
+     also disabled in this mode, so the graph renders calm + static). */
+  .cs-edge-flow { display: none; }
 }
