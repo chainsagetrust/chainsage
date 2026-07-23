@@ -56,7 +56,7 @@ export const metadata: Metadata = {
     icon: "/favicon.svg",
   },
   other: {
-    "virtual-protocol-site-verification": "28dd54833147f98202c70ae90f957f8e",
+    "virtual-protocol-site-verification": "0b03893d7b9837798ed27b6c0157085d",
   },
 };
 
